@@ -276,3 +276,8 @@ Codex
 ### Git Commit
 
 `6b4d67b`
+
+### 并发提交说明
+
+- 本次文档提交完成后，另一 Agent 并发提交了 `24572d0`（WorkBuddy 的 EAS / SDK 配置改动）。回写本条 DEVLOG 时发现 HEAD 已变化，误触发了 amend 并产生 `24583ff`；业务文件内容未丢失，原提交仍可在 reflog 中追溯。
+- 后续 Agent 应在提交前再次检查 HEAD 和工作区，避免对并发 Agent 的提交执行 amend 或历史改写。
