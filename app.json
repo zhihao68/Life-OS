@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Life OS",
+    "slug": "life-os",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "jsEngine": "jsc",
+    "splash": { "backgroundColor": "#f7f8fc" },
+    "android": { "package": "com.lifeos.mobile" },
+    "web": { "bundler": "metro" }
+  }
+}
