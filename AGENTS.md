@@ -1,363 +1,490 @@
-# Life OS 多 Agent 协作开发规范
+# Life OS 多 Agent 协作开发规则
 
-本项目是 Life OS 手机 App，使用 Expo + React Native 开发。
+## 最高原则
 
-项目由多个 Agent 协同开发，包括 Codex、Work Buddy 等。
+本项目由多个 AI Agent 协同开发，例如 Codex、Work Buddy。
 
-所有 Agent 必须遵守以下规则。
+所有 Agent 都是完整的软件开发 Agent。
+
+任何 Agent 都可以：
+
+- 阅读整个项目
+- 分析产品需求
+- 修改 UI
+- 修改业务逻辑
+- 修改数据层
+- 修改 AI
+- 修改 API
+- 修改数据库
+- 修改配置
+- 修改测试
+- 修改文档
+
+**不要按照 Agent 名称限制开发权限。**
+
+Codex 不等于只能做后端。
+
+Work Buddy 不等于只能做 UI。
+
+真正的职责划分以当前任务为准。
 
 ---
 
-## 1. 开始工作前
+# 1. 每次开始任务前必须做
 
-在修改任何代码之前，必须先读取：
+在修改代码之前，必须依次：
+
+### 读取项目状态
+
+读取：
 
 - README.md
 - AGENTS.md
 - DEVLOG.md
 - TODO.md
-- 当前 Git 状态
-- 与当前任务相关的 docs/
+- docs/ 下与当前任务相关的文档
 
-然后确认：
+然后检查：
 
-- 当前项目使用的技术栈
-- 当前已经完成的功能
-- 最近一次 Agent 做了什么
-- 当前是否存在未提交修改
-- 当前是否存在其他 Agent 正在进行的工作
+```bash
+git status
+git branch
+git log -5 --oneline
+git diff
+```
 
-禁止直接覆盖未确认来源的修改。
-
----
-
-## 2. 修改原则
-
-每次只围绕当前任务修改，不要顺手重构无关代码。
-
-不要擅自改变产品需求。
-
-如果发现架构问题：
-
-- 可以记录问题
-- 可以提出建议
-- 除非当前任务明确要求，否则不要大范围修改
-
-优先保持现有功能正常。
+必须先理解当前代码状态，再开始修改。
 
 ---
 
-## 3. 每次修改必须留下真实记录
+# 2. 任务优先于 Agent 身份
 
-每次完成任务后必须更新：
+任务由项目负责人分配。
 
-`DEVLOG.md`
+例如：
 
-日志必须基于实际修改，不允许凭记忆简单描述。
+“优化首页”
 
-必须包含：
+可以由 Codex 完成，也可以由 Work Buddy 完成。
 
-### 时间
+例如：
 
-YYYY-MM-DD HH:mm
+“设计 AI 一句话生成计划”
+
+可以同时涉及：
+
+- UI
+- AI
+- 数据
+- Service
+- API
+- 数据库
+
+负责 Agent 可以根据任务需要修改所有相关内容。
+
+不要因为自己是 Codex 或 Work Buddy，就拒绝修改其他类型的代码。
+
+---
+
+# 3. 不允许擅自扩大需求
+
+完成当前任务时：
+
+优先解决当前任务。
+
+发现其他问题：
+
+可以：
+
+1. 记录到 DEVLOG.md
+2. 添加到 TODO.md
+3. 必要时向项目负责人说明
+
+不要为了“顺便优化”而大范围重构整个项目。
+
+---
+
+# 4. 每次修改后必须记录 DEVLOG
+
+这是强制要求。
+
+**任何一次实际代码修改都必须更新 DEVLOG.md。**
+
+无论修改大小：
+
+- 一个组件
+- 一个页面
+- 一个配置
+- 一个数据库字段
+- 一个 AI Prompt
+- 一个 Bug
+- 一个图标
+- 一个依赖
+
+都必须记录。
+
+---
+
+# 5. DEVLOG 格式
+
+每次新增一条日志：
+
+```markdown
+## YYYY-MM-DD HH:mm
 
 ### Agent
-
-Codex / Work Buddy / 其他
+Codex / Work Buddy
 
 ### 任务
+<本次任务名称>
 
-本次任务名称
+### 目标
+<本次准备解决什么问题>
 
 ### 修改文件
 
-列出所有实际修改、新增、删除的文件。
+- `路径/文件1`
+- `路径/文件2`
+- `路径/文件3`
 
-### 具体修改
+### 实际修改
 
-逐项说明每个文件实际改了什么。
+- 文件1：修改了什么
+- 文件2：修改了什么
+- 文件3：修改了什么
 
-### 修改原因
+### 新增
 
-为什么这样修改。
+- 新增了哪些文件/功能
+
+### 删除
+
+- 删除了哪些文件/代码
+
+### 为什么修改
+
+<修改原因>
 
 ### 验证
 
-记录实际执行过的：
+- TypeScript：✅ / ❌ / ⚠️
+- Expo Doctor：✅ / ❌ / ⚠️
+- Web：✅ / ❌ / ⚠️
+- Android Bundle：✅ / ❌ / ⚠️
+- Android APK：✅ / ❌ / ⚠️
+- 其他测试：✅ / ❌ / ⚠️
 
-- TypeScript
-- Expo Doctor
-- Web
-- Android Bundle
-- Android Build
-- 测试
-- 其他相关检查
+只能记录实际执行过的验证。
 
-必须明确写：
-
-✅ 通过
-
-❌ 失败
-
-⚠️ 未执行
-
-不能把未执行的检查写成通过。
+禁止把没有执行的测试写成“通过”。
 
 ### 未完成
 
-明确记录没有完成的部分。
+<没有完成的内容>
 
-### 风险
+### 已知问题 / 风险
 
-记录可能影响其他功能的问题。
+<目前发现的问题>
 
-### 下一步
+### 给下一位 Agent 的信息
 
-告诉下一位 Agent 下一步应该做什么。
+<下一位 Agent 接手时需要知道什么>
+
+### Git Commit
+
+<commit hash>
+```
 
 ---
 
-## 4. Git 规则
+# 6. 日志必须基于真实修改
 
-每个完成的独立功能都必须进行 Git commit。
+禁止：
 
-commit 格式：
+“优化了首页。”
 
-`[Agent] type: description`
+必须说明：
+
+“修改了哪些文件、每个文件改了什么。”
+
+推荐通过：
+
+```bash
+git diff
+```
+
+确认实际修改内容后再填写 DEVLOG。
+
+---
+
+# 7. Git 规范
+
+完成一个相对独立的任务后进行 commit。
+
+格式：
+
+```text
+[Agent] type: description
+```
 
 例如：
 
-`[Codex] feat: add ai task action`
+```text
+[Codex] feat: add ai daily plan
+[WorkBuddy] ui: redesign home dashboard
+[Codex] fix: recurring task date calculation
+```
 
-`[WorkBuddy] ui: improve today screen`
-
-`[Codex] fix: recurring task scheduling`
-
-禁止使用：
-
-- `update`
-- `fix`
-- `change`
-- `test`
-
-这种无法说明实际内容的提交信息。
+Commit message 必须描述实际工作。
 
 ---
 
-## 5. 不允许假装完成
+# 8. 不得破坏其他 Agent 的工作
 
-如果：
+如果发现：
 
-- 没有成功运行
-- 没有成功构建
-- 没有真实测试
-- 没有真实调用 API
+```bash
+git status
+```
 
-必须明确说明。
+存在未提交修改：
 
-特别禁止把：
+不要执行：
 
-“代码已经写好”
+```bash
+git reset --hard
+```
 
-说成：
+不要删除未知来源代码。
 
-“功能已经验证完成”。
+先查看：
 
----
+```bash
+git diff
+```
 
-## 6. 多 Agent 冲突处理
+判断哪些修改属于当前任务。
 
-如果 Git 工作区存在其他 Agent 未提交修改：
+如果发现冲突：
 
-不要直接覆盖。
-
-先：
-
-1. 查看 git diff
-2. 判断修改归属
-3. 尽量只修改自己的目标文件
-4. 如果可能产生冲突，记录到 DEVLOG.md
-
-禁止直接：
-
-`git reset --hard`
-
-禁止删除其他 Agent 的修改。
+在 DEVLOG.md 中记录。
 
 ---
 
-## 7. 项目当前产品原则
+# 9. 产品需求不得擅自改变
 
-Life OS 核心理念：
+Life OS 当前核心方向：
 
-“用户表达意愿，AI 把意愿变成可执行计划。”
+### Todo
 
-核心模块：
+- 一次性任务
+- 周期任务
+- 提醒
 
-- Home
+### Notes
+
+- Markdown
+- 图片
+- 标签
+- 搜索
+- 双向链接
+- 关联内容
+
+### Fitness
+
+- 每周训练计划
+- 每日训练
+- 完成记录
+- 训练数据
+
+### Timeline
+
+统一展示用户的时间记录：
+
 - Todo
-- Recurring Tasks
-- Reminder
-- Timeline
-- Notes
-- Fitness
-- Review
-- AI
-- Data Sync
-- Data Export
-
-核心闭环：
-
-用户意愿  
-→ AI 理解  
-→ 生成计划  
-→ 创建任务  
-→ 提醒  
-→ 执行  
-→ 记录  
-→ Review  
-→ AI 分析  
-→ 下一阶段计划
-
----
-
-## 8. 数据架构原则
-
-UI 不应该直接承担核心业务逻辑。
-
-应该尽可能保持：
-
-UI  
-→ Service  
-→ Store / Database  
-→ Sync
-
-AI：
-
-UI  
-→ AI Service  
-→ AI Action  
-→ Business Service  
-→ Database
-
-核心实体至少包括：
-
-- User
-- Goal
-- Task
-- RecurringTask
-- TaskInstance
-- Reminder
 - Note
-- Attachment
-- WorkoutPlan
-- Workout
-- TimelineEvent
-- DailyLog
-- WeeklyReview
-- MonthlyReview
-- AIAction
+- Fitness
+- Journal
+- Event
 
----
+### Review
 
-## 9. AI 操作原则
+- 周结
+- 月结
+- AI 总结
 
-AI 以后必须能够通过结构化 Action 操作 Life OS。
+### AI
+
+核心体验：
+
+> 用户表达意愿 → AI 自动生成计划、任务、提醒和相关内容。
 
 例如：
 
-- `createTask`
-- `createRecurringTask`
-- `createReminder`
-- `createNote`
-- `createWorkoutPlan`
-- `updateTask`
-- `getTodayData`
-- `getWeekData`
-- `generateReview`
+“今天我要处理论文、晚上健身、睡前学英语。”
 
-不要把 AI 逻辑直接写死在 UI 页面。
+系统自动生成：
 
-当前没有真实 AI API 时可以使用 Mock AI Service，但必须保留以后接入真实模型的接口。
+- 今日任务
+- 时间安排
+- 提醒
+- 健身安排
 
 ---
 
-## 10. 数据长期可用原则
+# 10. AI 不是普通聊天框
 
-Life OS 必须考虑：
+AI 应当逐渐成为 Life OS 的自然语言操作入口。
 
-- Local First
-- Offline
-- Cloud Sync
-- Backup
-- Restore
-- Markdown Export
-- JSON Export
-- ZIP Export
-- 图片附件同步
-- 多设备同步
-- 数据冲突
+未来 AI 可以执行：
 
-不能把用户核心数据永久绑定在 React state 中。
+```text
+createTask
+createRecurringTask
+createReminder
+createNote
+createWorkoutPlan
+updateTask
+deleteTask
+getTodayData
+getWeekData
+generateReview
+```
 
----
-
-## 11. UI 原则
-
-这是手机 App。
-
-优先考虑：
-
-- 单手操作
-- Safe Area
-- Bottom Navigation
-- Bottom Sheet
-- 键盘
-- 手势
-- 小屏适配
-- 点击反馈
-- 加载状态
-- 空状态
-
-视觉：
-
-极简  
-现代  
-克制  
-高级  
-长期耐看
-
-不要做成传统后台管理系统。
+AI 逻辑与 UI 尽可能解耦。
 
 ---
 
-## 12. 完成任务后的固定汇报
+# 11. 数据架构
 
-每个 Agent 完成工作后，必须输出：
+Life OS 最终需要支持：
 
-【完成】  
-本次完成什么。
+- 本地数据
+- 离线
+- 云同步
+- 多设备
+- 数据备份
+- 数据恢复
+- Markdown 导出
+- JSON 导出
+- ZIP 导出
 
-【修改文件】  
-哪些文件发生了变化。
+不要把核心数据永久放在 React state 中。
 
-【新增】  
-哪些文件新增。
+---
 
-【删除】  
-哪些文件删除。
+# 12. 当前开发优先级
 
-【验证】  
-实际执行了什么以及结果。
+开发 Agent 应优先根据项目负责人当前指令执行。
 
-【未完成】  
-哪些内容没有完成。
+如果没有明确任务：
 
-【风险】  
-目前有什么风险。
+优先查看：
 
-【下一步】  
-下一位 Agent 建议做什么。
+```text
+TODO.md
+DEVLOG.md
+README.md
+```
 
-【Git】  
-commit hash。
+选择最高优先级、最影响产品可用性的任务处理。
+
+不得擅自大规模增加新模块。
+
+---
+
+# 13. 每次任务完成必须做的事情
+
+无论任务大小，完成后必须：
+
+1. 检查实际代码修改
+2. 执行相关测试
+3. 更新 DEVLOG.md
+4. 必要时更新 TODO.md
+5. 提交 Git
+6. 给出最终汇报
+
+最终汇报必须包含：
+
+```text
+完成：
+修改文件：
+新增：
+删除：
+验证：
+未完成：
+风险：
+下一步：
+Git Commit：
+```
+
+---
+
+# 14. Agent 之间的交接
+
+DEVLOG.md 是 Agent 之间的重要交接记录。
+
+下一位 Agent 开始任务时，应先阅读最近的 DEVLOG。
+
+如果上一位 Agent 明确写了：
+
+“下一步建议……”
+
+下一位 Agent 应结合当前任务判断是否执行。
+
+不能盲目覆盖前一个 Agent 的工作。
+
+---
+
+# 15. 真实性要求
+
+禁止：
+
+- 假装测试成功
+- 假装构建成功
+- 假装 API 已连接
+- 假装 APK 已生成
+- 假装数据库已经接入
+- 假装同步已经实现
+
+必须区分：
+
+“代码完成”
+
+和：
+
+“实际验证完成”。
+
+---
+
+# 16. 最终目标
+
+Life OS 不是简单的 Todo + Notes App。
+
+最终目标：
+
+```text
+用户表达意愿
+        ↓
+AI 理解
+        ↓
+生成计划
+        ↓
+创建任务
+        ↓
+提醒
+        ↓
+执行
+        ↓
+记录
+        ↓
+Timeline
+        ↓
+Review
+        ↓
+AI 分析
+        ↓
+下一阶段计划
+```
+
+每一次开发都应该让这个闭环更加完整。
