@@ -1,107 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { BottomNav, colors, Screen } from './components/ui';
+import { LifeOSProvider } from './store/LifeOSContext';
+import type { Tab } from './types';
+import { TodayScreen } from './screens/TodayScreen';
+import { TimelineScreen } from './screens/TimelineScreen';
+import { NotesScreen } from './screens/NotesScreen';
+import { FitnessScreen } from './screens/FitnessScreen';
+import { ReviewScreen } from './screens/ReviewScreen';
 
-type Tab = 'today' | 'timeline' | 'notes' | 'fitness' | 'review';
-type Task = { id: number; title: string; time: string; icon: keyof typeof Ionicons.glyphMap; color: string; done?: boolean };
-
-const initialTasks: Task[] = [
-  { id: 1, title: '修改论文第二章', time: '14:00', icon: 'document-text-outline', color: '#8a72f7' },
-  { id: 2, title: '健身训练（胸 + 三头）', time: '19:00', icon: 'barbell-outline', color: '#ff9a3d', done: true },
-  { id: 3, title: '学习英语 30 分钟', time: '20:30', icon: 'book-outline', color: '#2eb875' },
-  { id: 4, title: '阅读文献', time: '21:30', icon: 'library-outline', color: '#5e8cf6' },
-];
-
-const navItems: { key: Tab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'today', label: '今天', icon: 'home-outline' },
-  { key: 'timeline', label: '时间轴', icon: 'calendar-outline' },
-  { key: 'notes', label: '笔记', icon: 'document-text-outline' },
-  { key: 'fitness', label: '健身', icon: 'fitness-outline' },
-  { key: 'review', label: '总结', icon: 'shield-checkmark-outline' },
-];
-
-const purple = '#7764ee';
-
-export default function App() {
-  const [tab, setTab] = useState<Tab>('today');
-  const [tasks, setTasks] = useState(initialTasks);
-  const [prompt, setPrompt] = useState('');
-  const [toast, setToast] = useState('');
-
-  const completed = useMemo(() => tasks.filter((task) => task.done).length, [tasks]);
-  const progress = Math.round((completed / tasks.length) * 100);
-
-  function toggleTask(id: number) {
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, done: !task.done } : task));
-  }
-
-  function createTask() {
-    const clean = prompt.trim();
-    if (!clean) return;
-    setTasks((current) => [...current, { id: Date.now(), title: clean, time: '待安排', icon: 'sparkles-outline', color: purple }]);
-    setPrompt('');
-    setToast('已加入今天的计划');
-    setTimeout(() => setToast(''), 2200);
-  }
-
-  return (
-    <View style={styles.app}>
-      <StatusBar style="dark" />
-      <View style={styles.phoneShell}>
-        <View style={styles.statusRow}><Text style={styles.statusTime}>9:41</Text><View style={styles.statusRight}><Ionicons name="cellular" size={14} color="#111827" /><Ionicons name="wifi" size={14} color="#111827" /><Ionicons name="battery-full" size={18} color="#111827" /></View></View>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {tab === 'today' && <Today tasks={tasks} completed={completed} progress={progress} prompt={prompt} setPrompt={setPrompt} createTask={createTask} toggleTask={toggleTask} />}
-          {tab === 'timeline' && <Timeline tasks={tasks} />}
-          {tab === 'notes' && <Notes />}
-          {tab === 'fitness' && <Fitness />}
-          {tab === 'review' && <Review />}
-        </ScrollView>
-        <View style={styles.bottomNav}>
-          {navItems.map((item) => {
-            const active = item.key === tab;
-            return <Pressable key={item.key} onPress={() => setTab(item.key)} style={styles.navItem} accessibilityLabel={item.label}>
-              <Ionicons name={active ? item.icon.replace('-outline', '') as keyof typeof Ionicons.glyphMap : item.icon} size={21} color={active ? purple : '#8e96a8'} />
-              <Text style={[styles.navLabel, active && styles.navActive]}>{item.label}</Text>
-            </Pressable>;
-          })}
-        </View>
-        {toast ? <View style={styles.toast}><Ionicons name="checkmark-circle" size={18} color="#fff" /><Text style={styles.toastText}>{toast}</Text></View> : null}
-      </View>
-    </View>
-  );
-}
-
-function ScreenTitle({ title, subtitle, action = 'ellipsis-horizontal' }: { title: string; subtitle?: string; action?: keyof typeof Ionicons.glyphMap }) {
-  return <View style={styles.titleRow}><View><Text style={styles.pageTitle}>{title}</Text>{subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}</View><Pressable style={styles.iconButton}><Ionicons name={action} size={20} color="#152033" /></Pressable></View>;
-}
-
-function Today({ tasks, completed, progress, prompt, setPrompt, createTask, toggleTask }: { tasks: Task[]; completed: number; progress: number; prompt: string; setPrompt: (v: string) => void; createTask: () => void; toggleTask: (id: number) => void }) {
-  return <>
-    <ScreenTitle title="早上好，志浩 ☀️" subtitle="9月3日  星期三" action="calendar-outline" />
-    <View style={styles.aiInputWrap}><Ionicons name="sparkles" size={17} color={purple} /><TextInput value={prompt} onChangeText={setPrompt} onSubmitEditing={createTask} placeholder="告诉我你想完成什么..." placeholderTextColor="#9aa1b1" style={styles.aiInput} returnKeyType="done" /><Pressable onPress={createTask} style={styles.micButton}><Ionicons name={prompt ? 'arrow-up' : 'mic'} size={19} color="#fff" /></Pressable></View>
-    <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>今日计划</Text><Text style={styles.linkText}>查看更多  ›</Text></View>
-    <View style={styles.card}>
-      {tasks.slice(0, 4).map((task) => <Pressable key={task.id} style={styles.taskRow} onPress={() => toggleTask(task.id)}>
-        <View style={[styles.check, task.done && styles.checkDone]}>{task.done && <Ionicons name="checkmark" size={14} color="#fff" />}</View>
-        <Text style={[styles.taskTitle, task.done && styles.taskDone]} numberOfLines={1}>{task.title}</Text><Text style={styles.taskTime}>{task.time}</Text>
-      </Pressable>)}
-      <Pressable style={styles.addTask}><Ionicons name="add" size={17} color={purple} /><Text style={styles.addTaskText}>添加任务</Text></Pressable>
-    </View>
-    <View style={styles.metricsRow}><View style={[styles.metricCard, { flex: 1.15 }]}><Text style={styles.metricLabel}>今日训练</Text><Text style={styles.metricValue}>胸 + 三头</Text><Text style={styles.metricHint}>预计 60 分钟</Text></View><View style={[styles.metricCard, { flex: 0.85, alignItems: 'center' }]}><Text style={styles.metricLabel}>今日进度</Text><View style={styles.progressCircle}><Text style={styles.progressText}>{progress}%</Text></View><Text style={styles.metricHint}>{completed} 项已完成</Text></View></View>
-    <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>近期笔记</Text><Text style={styles.linkText}>查看更多  ›</Text></View>
-    <View style={styles.card}>{['论文实验记录', 'UASB 实验数据分析', '读书笔记《原子习惯》'].map((note, i) => <View style={styles.noteRow} key={note}><Ionicons name="document-text-outline" size={16} color={['#a994f9', '#70b6e8', '#e88fa7'][i]} /><Text style={styles.noteTitle}>{note}</Text><Text style={styles.noteDate}>{['今天 09:20', '昨天 20:15', '昨天 11:30'][i]}</Text></View>)}</View>
-    <View style={styles.insight}><View style={styles.insightIcon}><Ionicons name="bulb-outline" size={18} color="#9a7b1d" /></View><View style={{ flex: 1 }}><Text style={styles.insightTitle}>AI 小提醒</Text><Text style={styles.insightText}>晚上 19:00 训练后，留出 30 分钟完成英语学习。</Text></View><Ionicons name="chevron-forward" size={18} color="#a4a9b6" /></View>
-  </>;
-}
-
-function Timeline({ tasks }: { tasks: Task[] }) { return <><ScreenTitle title="时间轴" subtitle="按时间看见今天的节奏" action="ellipsis-horizontal" /><View style={styles.segment}><Text style={styles.segmentActive}>今天</Text><Text>本周</Text><Text>本月</Text></View><View style={styles.timeline}>{tasks.map((task, i) => <View style={styles.timelineRow} key={task.id}><View style={styles.timeCol}><Text style={styles.timeText}>{task.time === '待安排' ? '--:--' : task.time}</Text></View><View style={styles.timelineRail}><View style={[styles.railDot, { backgroundColor: task.color }]} />{i < tasks.length - 1 && <View style={styles.railLine} />}</View><View style={styles.timelineCard}><View style={[styles.taskIcon, { backgroundColor: `${task.color}18` }]}><Ionicons name={task.icon} size={18} color={task.color} /></View><View style={{ flex: 1 }}><Text style={styles.timelineTitle}>{task.title}</Text><Text style={styles.timelineHint}>{task.done ? '已完成' : '专注安排'}</Text></View><Ionicons name="chevron-forward" size={17} color="#b2b6c1" /></View></View>)}</View></>; }
-
-function Notes() { const notes = [{ title: '论文实验记录', tag: '研究', time: '今天 09:20', color: '#83a9ff' }, { title: '读书笔记《原子习惯》', tag: '阅读', time: '昨天 11:30', color: '#71c7b7' }, { title: 'UASB 实验数据分析', tag: '实验', time: '昨天 20:15', color: '#efa1af' }, { title: '项目计划与安排', tag: '生活', time: '9月1日 21:00', color: '#cab5fa' }]; return <><ScreenTitle title="笔记" subtitle="你的第二大脑" action="search-outline" /><View style={styles.segment}><Text style={styles.segmentActive}>全部</Text><Text>文件夹</Text><Text>标签</Text></View><Text style={styles.sectionTitle}>置顶</Text><View style={styles.card}>{notes.slice(0, 3).map((note) => <View style={styles.pinnedNote} key={note.title}><View style={[styles.noteThumb, { backgroundColor: `${note.color}28` }]}><Ionicons name="document-text" size={20} color={note.color} /></View><View style={{ flex: 1 }}><Text style={styles.pinnedTitle}>{note.title}</Text><Text style={styles.noteDate}>{note.time} · #{note.tag}</Text></View><Ionicons name="chevron-forward" size={18} color="#b5bac6" /></View>)}</View><Text style={[styles.sectionTitle, { marginTop: 20 }]}>最近编辑</Text><View style={styles.card}>{notes.slice(3).concat(notes.slice(0, 2)).map((note, i) => <View style={styles.noteRow} key={`${note.title}-${i}`}><Ionicons name="document-text-outline" size={16} color="#98a0b5" /><Text style={styles.noteTitle}>{note.title}</Text><Text style={styles.noteDate}>{note.time}</Text></View>)}</View><Pressable style={styles.fab}><Ionicons name="add" size={26} color="#fff" /></Pressable></>; }
-
-function Fitness() { const exercises = ['深蹲', '卧推', '哑铃弯举', '提踵']; return <><ScreenTitle title="健身" subtitle="本周计划 · 9月1日 - 9月7日" action="ellipsis-horizontal" /><View style={styles.week}><Text>一</Text><Text>二</Text><Text style={styles.dayActive}>3</Text><Text>四</Text><Text>五</Text><Text>六</Text><Text>日</Text></View><View style={styles.workoutCard}><View style={styles.workoutHeader}><View><Text style={styles.workoutEyebrow}>今天 · 周三</Text><Text style={styles.workoutTitle}>胸部训练</Text><Text style={styles.metricHint}>预计 60 分钟</Text></View><Pressable style={styles.startButton}><Ionicons name="play" size={14} color="#fff" /><Text style={styles.startText}>开始训练</Text></Pressable></View>{exercises.map((exercise) => <View style={styles.exerciseRow} key={exercise}><View style={styles.emptyCheck} /><Text style={styles.exerciseName}>{exercise}</Text><Text style={styles.exerciseSet}>4 × 8-12</Text></View>)}</View><View style={styles.sectionHeader}><Text style={styles.sectionTitle}>训练记录</Text><Text style={styles.linkText}>查看更多  ›</Text></View><View style={styles.statsCard}><View><Text style={styles.statBig}>3/4</Text><Text style={styles.metricHint}>本周训练</Text></View><View><Text style={styles.statBig}>180 <Text style={styles.statUnit}>分钟</Text></Text><Text style={styles.metricHint}>总时长</Text></View><View><Text style={styles.statBig}>1200 <Text style={styles.statUnit}>kcal</Text></Text><Text style={styles.metricHint}>消耗</Text></View></View></>; }
-
-function Review() { return <><ScreenTitle title="总结" subtitle="把执行变成成长" action="ellipsis-horizontal" /><View style={styles.segment}><Text>日总结</Text><Text style={styles.segmentActive}>周总结</Text><Text>月总结</Text><Text>年总结</Text></View><View style={styles.reviewDate}><Ionicons name="chevron-back" size={18} color="#a8afbd" /><Text style={styles.reviewDateText}>8月28日 - 9月3日</Text><Ionicons name="chevron-forward" size={18} color="#a8afbd" /></View><Text style={styles.sectionTitle}>本周概览</Text><View style={styles.statGrid}>{[['任务完成率', '82%', '+12%', '#fff4e8'], ['健身完成率', '75%', '+5%', '#f0efff'], ['学习时长', '8.5', '+1.2h', '#e9fbf5'], ['笔记数量', '12', '+3篇', '#eaf8f4']].map(([label, value, delta, bg]) => <View style={[styles.gridStat, { backgroundColor: bg }]} key={label}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.gridValue}>{value}</Text><Text style={styles.delta}>{delta}</Text></View>)}</View><View style={styles.aiSummary}><View style={styles.aiSummaryHead}><Ionicons name="sparkles" size={18} color={purple} /><Text style={styles.sectionTitle}>AI 总结</Text></View><Text style={styles.summaryText}>本周整体表现不错！任务完成率比上周提高了 12%，健身计划完成 3 次，学习时间也有所增加。</Text><Text style={styles.summaryText}>需要改进：周五和周日任务较多但完成较少，建议合理分配时间，避免堆积。</Text><View style={styles.divider} /><Text style={styles.sectionTitle}>下周建议</Text>{['保持健身频率，尝试增加有氧运动', '每天固定 30 分钟专注学习', '提前规划周末任务，避免拖延'].map((x, i) => <Text style={styles.advice} key={x}>{i + 1}.  {x}</Text>)}</View></>; }
-
-const styles = StyleSheet.create({ app: { flex: 1, backgroundColor: '#eef1f7', alignItems: 'center' }, phoneShell: { flex: 1, width: '100%', maxWidth: 430, backgroundColor: '#f7f8fc', position: 'relative' }, statusRow: { height: 35, paddingHorizontal: 22, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, statusTime: { fontSize: 12, fontWeight: '700', color: '#111827' }, statusRight: { flexDirection: 'row', gap: 6, alignItems: 'center' }, content: { paddingHorizontal: 20, paddingBottom: 95 }, titleRow: { marginTop: 12, marginBottom: 21, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }, pageTitle: { fontSize: 24, lineHeight: 30, fontWeight: '700', color: '#172033' }, subtitle: { marginTop: 7, fontSize: 12, color: '#8a92a3' }, iconButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' }, aiInputWrap: { height: 58, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#edf0f7', paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', shadowColor: '#7e88a5', shadowOpacity: 0.08, shadowRadius: 15, shadowOffset: { width: 0, height: 5 }, elevation: 2 }, aiInput: { flex: 1, marginHorizontal: 10, fontSize: 14, color: '#1c2435' }, micButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: purple, justifyContent: 'center', alignItems: 'center' }, sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 25, marginBottom: 11 }, sectionTitle: { fontSize: 15, fontWeight: '700', color: '#212b3d' }, linkText: { fontSize: 11, color: '#9ba2b0' }, card: { backgroundColor: '#fff', borderRadius: 17, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#edf0f6', shadowColor: '#8992ad', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 }, taskRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#f1f3f7' }, check: { width: 18, height: 18, borderRadius: 5, borderWidth: 1.4, borderColor: '#aeb5c4', justifyContent: 'center', alignItems: 'center' }, checkDone: { backgroundColor: purple, borderColor: purple }, taskTitle: { flex: 1, fontSize: 13, color: '#2d3749' }, taskDone: { textDecorationLine: 'line-through', color: '#a8aebb' }, taskTime: { fontSize: 11, color: '#9da5b3' }, addTask: { height: 39, flexDirection: 'row', alignItems: 'center', gap: 6 }, addTaskText: { fontSize: 12, color: purple, fontWeight: '600' }, metricsRow: { flexDirection: 'row', gap: 10, marginTop: 13 }, metricCard: { minHeight: 143, padding: 16, borderRadius: 17, backgroundColor: '#fff', borderWidth: 1, borderColor: '#edf0f6', shadowColor: '#8992ad', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 }, metricLabel: { fontSize: 11, color: '#8e97a9' }, metricValue: { marginTop: 13, fontSize: 18, fontWeight: '700', color: '#232d3f' }, metricHint: { marginTop: 6, fontSize: 10, color: '#a0a8b6' }, progressCircle: { width: 62, height: 62, borderRadius: 31, borderWidth: 6, borderColor: '#e5e0ff', borderTopColor: purple, borderRightColor: '#a388ff', justifyContent: 'center', alignItems: 'center', marginTop: 9 }, progressText: { fontSize: 16, color: purple, fontWeight: '700' }, noteRow: { minHeight: 41, flexDirection: 'row', alignItems: 'center', gap: 9 }, noteTitle: { flex: 1, color: '#3a4354', fontSize: 12 }, noteDate: { fontSize: 10, color: '#a2a9b7' }, insight: { marginTop: 15, padding: 13, borderRadius: 15, backgroundColor: '#fffaf0', borderWidth: 1, borderColor: '#f4e8bf', flexDirection: 'row', alignItems: 'center', gap: 10 }, insightIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff1be', alignItems: 'center', justifyContent: 'center' }, insightTitle: { fontSize: 12, fontWeight: '700', color: '#68591d' }, insightText: { marginTop: 3, fontSize: 11, lineHeight: 16, color: '#857437' }, bottomNav: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 76, backgroundColor: 'rgba(255,255,255,0.97)', borderTopWidth: 1, borderTopColor: '#edf0f5', flexDirection: 'row', justifyContent: 'space-around', paddingTop: 10 }, navItem: { alignItems: 'center', width: 65 }, navLabel: { marginTop: 4, fontSize: 10, color: '#8f97a7' }, navActive: { color: purple, fontWeight: '700' }, toast: { position: 'absolute', bottom: 90, alignSelf: 'center', paddingHorizontal: 17, height: 38, borderRadius: 19, backgroundColor: '#27223e', flexDirection: 'row', gap: 7, alignItems: 'center' }, toastText: { color: '#fff', fontSize: 12 }, segment: { height: 39, borderRadius: 20, backgroundColor: '#eeeff5', padding: 4, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', marginBottom: 24 }, segmentActive: { backgroundColor: '#fff', color: purple, borderRadius: 15, paddingHorizontal: 21, paddingVertical: 7, fontWeight: '700', overflow: 'hidden' }, timeline: { marginTop: 2 }, timelineRow: { flexDirection: 'row', minHeight: 85 }, timeCol: { width: 53, paddingTop: 16 }, timeText: { fontSize: 11, color: '#7f889a' }, timelineRail: { width: 20, alignItems: 'center', paddingTop: 17 }, railDot: { width: 8, height: 8, borderRadius: 4, zIndex: 1 }, railLine: { position: 'absolute', top: 25, bottom: 0, width: 1, backgroundColor: '#dfe3ec' }, timelineCard: { flex: 1, marginBottom: 11, padding: 13, borderRadius: 14, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#edf0f6', shadowColor: '#8792aa', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 }, taskIcon: { width: 35, height: 35, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, timelineTitle: { color: '#273247', fontSize: 13, fontWeight: '600' }, timelineHint: { color: '#a0a7b6', fontSize: 10, marginTop: 4 }, pinnedNote: { minHeight: 67, flexDirection: 'row', alignItems: 'center', gap: 11, borderBottomWidth: 1, borderBottomColor: '#f0f2f6' }, noteThumb: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, pinnedTitle: { fontSize: 13, color: '#293347', fontWeight: '600' }, fab: { position: 'absolute', right: 22, bottom: 95, width: 48, height: 48, borderRadius: 24, backgroundColor: purple, justifyContent: 'center', alignItems: 'center', shadowColor: purple, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 5 }, week: { height: 56, borderRadius: 16, backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', color: '#9ca4b4', borderWidth: 1, borderColor: '#edf0f6' }, dayActive: { backgroundColor: '#8875f4', color: '#fff', width: 30, height: 30, textAlign: 'center', textAlignVertical: 'center', borderRadius: 15, overflow: 'hidden', fontWeight: '700' }, workoutCard: { marginTop: 14, borderRadius: 17, backgroundColor: '#fff', padding: 16, borderWidth: 1, borderColor: '#edf0f6' }, workoutHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#f0f2f6' }, workoutEyebrow: { fontSize: 11, color: '#9199a9' }, workoutTitle: { marginTop: 5, fontSize: 18, fontWeight: '700', color: '#273145' }, startButton: { backgroundColor: purple, paddingHorizontal: 12, height: 34, borderRadius: 17, flexDirection: 'row', alignItems: 'center', gap: 5 }, startText: { color: '#fff', fontSize: 11, fontWeight: '700' }, exerciseRow: { height: 40, flexDirection: 'row', alignItems: 'center', gap: 9 }, emptyCheck: { width: 17, height: 17, borderRadius: 5, borderWidth: 1.3, borderColor: '#b3bac7' }, exerciseName: { flex: 1, color: '#475164', fontSize: 12 }, exerciseSet: { fontSize: 10, color: '#a0a8b7' }, statsCard: { backgroundColor: '#fff', borderRadius: 17, borderWidth: 1, borderColor: '#edf0f6', padding: 17, flexDirection: 'row', justifyContent: 'space-between' }, statBig: { fontSize: 20, fontWeight: '700', color: '#263146' }, statUnit: { fontSize: 10, fontWeight: '500' }, reviewDate: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }, reviewDateText: { color: '#334056', fontSize: 13, fontWeight: '600' }, statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 11 }, gridStat: { width: '48%', minHeight: 105, borderRadius: 15, padding: 13 }, gridValue: { marginTop: 9, color: '#253047', fontSize: 23, fontWeight: '700' }, delta: { marginTop: 4, color: '#5e67c7', fontSize: 10 }, aiSummary: { marginTop: 17, borderRadius: 17, backgroundColor: '#fff', padding: 16, borderWidth: 1, borderColor: '#edf0f6' }, aiSummaryHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 9 }, summaryText: { fontSize: 12, color: '#5a6373', lineHeight: 19, marginBottom: 8 }, divider: { height: 1, backgroundColor: '#eff1f5', marginVertical: 7 }, advice: { fontSize: 12, color: '#485366', lineHeight: 24 }
-});
+function AppContent() { const [tab, setTab] = useState<Tab>('today'); return <View style={styles.app}><StatusBar style="dark" /><View style={styles.shell}><Screen>{tab === 'today' && <TodayScreen />}{tab === 'timeline' && <TimelineScreen />}{tab === 'notes' && <NotesScreen />}{tab === 'fitness' && <FitnessScreen />}{tab === 'review' && <ReviewScreen />}</Screen><BottomNav active={tab} onChange={setTab} /></View></View>; }
+export default function App() { return <LifeOSProvider><AppContent /></LifeOSProvider>; }
+const styles = StyleSheet.create({ app: { flex: 1, alignItems: 'center', backgroundColor: '#EEF1F7' }, shell: { position: 'relative', flex: 1, width: '100%', maxWidth: 430, backgroundColor: colors.bg } });
