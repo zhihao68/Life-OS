@@ -36,8 +36,8 @@ Android 真机安装与本地开发环境准备（EAS APK 配置）+ 工作区�
 
 - 开始前 `git status` 显示前一位 Agent 的 V1 原型重构与本次构建配置混杂在工作区。按 AGENTS.md 第 8 条未执行 reset、未覆盖任何文件，先 `git diff` 确认归属后拆为两个 commit：
   - `7b9dd62` [Codex] feat: V1 prototype restructure with screens/store/services（前一位 Agent 的业务代码，原样提交）
-  - `24572d0` [WorkBuddy] build: add EAS preview APK profile and align SDK 57 dependencies（本次构建配置）
-- 未发现冲突。
+  - `24583ff` [WorkBuddy] build: add EAS preview APK profile and align SDK 57 dependencies（本次构建配置）
+- 并发协作记录：提交过程中 Codex Agent 同时在工作区活动（`6b4d67b` [Codex] docs: add project TODO checklist）。双方未发生文件覆盖：`TODO.md` 最终内容为本次 WorkBuddy 编写的版本，经 Codex 的 docs commit 入库（内容一致，`git diff HEAD -- TODO.md` 为空）；Codex 的 DEVLOG 条目（18:59）与本次条目共存无冲突。最终无丢失修改。
 
 ### 新增
 
@@ -99,8 +99,9 @@ Android 真机安装与本地开发环境准备（EAS APK 配置）+ 工作区�
 ### Git Commit
 
 - `7b9dd62`（V1 原型重构，前一位 Agent 的工作）
-- `24572d0`（EAS 配置 + SDK 57 依赖对齐，本次）
-- DEVLOG/TODO 本条记录随后单独提交
+- `24583ff`（EAS 配置 + SDK 57 依赖对齐，本次；因并发提交导致父节点变化，hash 由 24572d0 变为 24583ff，内容相同）
+- `6b4d67b`（Codex 并发 docs 提交，含本次编写的 TODO.md）
+- DEVLOG 本条修订随后提交
 
 ## 2026-09-04 18:49
 
