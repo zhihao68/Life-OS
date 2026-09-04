@@ -1,5 +1,107 @@
 # DEVLOG
 
+## 2026-09-04 19:05
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+Android 真机安装与本地开发环境准备（EAS APK 配置）+ 工作区积压修改清理提交
+
+### 目标
+
+1. 检查 Expo SDK / React Native / Node / JDK 配置；2. 新增 `eas.json` 并配置 preview APK 构建 profile（`android.buildType = "apk"`）；3. 运行 expo-doctor 修复依赖问题；4. 验证 `eas build -p android --profile preview` 就绪；5. 不更换 Expo/React Native 技术栈，保留未来本地 Android Studio 编译能力；6. 按 AGENTS.md 规范把工作区未提交修改整理入库。
+
+### 修改文件
+
+- `eas.json`（新增）
+- `app.json`
+- `package.json`
+- `package-lock.json`
+- `TODO.md`（新增）
+- `DEVLOG.md`
+- 另有前一位 Agent 的未提交重构（`App.tsx`、`README.md`、`components/`、`data/`、`screens/`、`services/`、`store/`、`types/`、`utils/`），见下方"合并处理"
+
+### 实际修改
+
+- `eas.json`：新建。`preview` profile 配置 `distribution: "internal"` + `android.buildType: "apk"`；`production` 保留 `app-bundle` 用于未来上架；`development`/`simulator` profile 预留。
+- `app.json`：移除 SDK 57 已废弃的顶层 `jsEngine: "jsc"` 和 `splash` 字段；新增 `plugins`：`expo-splash-screen`（backgroundColor #f7f8fc）与 `expo-font`。运行时引擎转为 SDK 57 默认 Hermes。
+- `package.json`：对齐 SDK 57 期望版本——`expo ~57.0.20`、`expo-status-bar ~57.0.1`、`react 19.2.3`、`react-dom 19.2.3`、`react-native 0.81.5 → 0.86.3`；新增 `expo-font ~57.0.3`、`expo-splash-screen ~57.0.8`。
+- `package-lock.json`：随依赖安装更新（移除 115 个冗余包）。
+- `TODO.md`：新建，按 P0–P3 优先级整理任务（真实 AI API、本地持久化、EAS 登录出包、本地 Android 环境、Notes/Fitness/Timeline/Review 补全、云同步、导出、测试）。
+
+### 合并处理（多 Agent 未提交修改）
+
+- 开始前 `git status` 显示前一位 Agent 的 V1 原型重构与本次构建配置混杂在工作区。按 AGENTS.md 第 8 条未执行 reset、未覆盖任何文件，先 `git diff` 确认归属后拆为两个 commit：
+  - `7b9dd62` [Codex] feat: V1 prototype restructure with screens/store/services（前一位 Agent 的业务代码，原样提交）
+  - `24572d0` [WorkBuddy] build: add EAS preview APK profile and align SDK 57 dependencies（本次构建配置）
+- 未发现冲突。
+
+### 新增
+
+- `eas.json`（EAS 构建配置）
+- `TODO.md`（项目任务清单，此前不存在）
+
+### 删除
+
+- `app.json` 中废弃的顶层 `jsEngine`、`splash` 字段（功能由插件与默认引擎承接，无功能损失）
+- `package-lock.json` 中依赖对齐后不再需要的包
+
+### 为什么修改
+
+- expo-doctor 报 3 项失败：缺少 `expo-font` peer 依赖、expo-status-bar 大版本不匹配、react/react-native 与 SDK 57 期望版本不符。不修复会导致 EAS 云端构建或 Expo Go 运行异常。
+- 顶层 `splash`/`jsEngine` 在 SDK 57 schema 校验中为非法字段，改为 `expo-splash-screen` 插件配置。
+- `eas.json` 是 EAS 构建 APK 的必需配置；`buildType: "apk"` 使产物可直接安装到真机。
+- 未生成 `android/` 目录（保持 managed + CNG 工作流），EAS 云端构建不依赖它；未来需要本地编译时执行 `npx expo prebuild --platform android` 即可，两条路线互不冲突。
+
+### 验证
+
+- TypeScript（`npx tsc --noEmit`）：✅ 通过，0 错误
+- Expo Doctor（`npx expo-doctor`）：✅ 21/21 全部通过（修复前为 3 项失败）
+- Android Bundle（`npx expo export --platform android`）：✅ 成功产出 Hermes 字节码 `AppEntry-*.hbc`（1.9MB）
+- EAS CLI（`npx eas-cli --version`）：✅ eas-cli/23.2.0 可用
+- EAS 登录状态（`npx eas-cli whoami`）：⚠️ 未登录，EAS APK 构建尚未实际执行
+- Android APK（`eas build`）：❌ 未执行（需登录 Expo 账号 + `eas init`），未生成任何 APK
+- 本地 Debug/Release Build：❌ 未执行（本机无 JDK、无 Android SDK、无 Gradle、无 Android Studio，`java` 命令不存在）
+- Web Preview：⚠️ 本轮未重新启动（此前 dist/ 已有导出产物，`dist/` 在 .gitignore 中）
+
+### 构建方式现状
+
+| 方式 | 状态 |
+|---|---|
+| Web Preview | ✅ 可用 |
+| Expo Bundle（export） | ✅ 已验证 |
+| EAS APK | 🟡 配置就绪，差 `eas login` + `eas init` |
+| 本地 Android Debug | ❌ 需安装 JDK 17+ / Android Studio / SDK |
+| 本地 Android Release | ❌ 同上 |
+
+### 未完成
+
+- EAS APK 未实际构建（未登录账号；`eas init` 需要账号归属，不适合由 Agent 代做）
+- 本地 Android 编译环境未安装
+- 真实 AI API、本地持久化、提醒等功能未动（不在本任务范围，已录入 TODO.md）
+
+### 已知问题 / 风险
+
+- react-native 0.81.5 → 0.86.3 为跨 5 个 minor 版本的对齐升级，tsc 与 bundle 导出均通过，但尚未在 Expo Go 真机回归五个页面 UI
+- `eas.json` 中 `appVersionSource: "remote"` 在 `eas init` 前首次构建时会自动初始化，属正常流程
+- 本机 npm 网络较慢（eas-cli 下载耗时约 3 分钟），首次 EAS 构建请预留时间
+
+### 给下一位 Agent 的信息
+
+- P0 顺序建议：先做本地持久化（storage.ts 接 AsyncStorage/SQLite），再接真实 AI API——AI 生成结果需要落库才有意义
+- EAS 出包步骤：`npx eas-cli login` → `npx eas-cli init` → `npx eas-cli build -p android --profile preview`，profile 已配好，无需改配置
+- 本地编译路线：装 JDK 17+ 与 Android Studio 后 `npx expo prebuild --platform android`，再 `npx expo run:android`
+- TODO.md 已建立，任务状态变化请同步更新
+
+### Git Commit
+
+- `7b9dd62`（V1 原型重构，前一位 Agent 的工作）
+- `24572d0`（EAS 配置 + SDK 57 依赖对齐，本次）
+- DEVLOG/TODO 本条记录随后单独提交
+
 ## 2026-09-04 18:49
 
 ### Agent
