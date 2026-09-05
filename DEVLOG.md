@@ -282,3 +282,80 @@ Codex
 
 - 本次文档提交完成后，另一 Agent 并发提交了 `24572d0`（WorkBuddy 的 EAS / SDK 配置改动）。回写本条 DEVLOG 时发现 HEAD 已变化，误触发了 amend 并产生 `24583ff`；业务文件内容未丢失，原提交仍可在 reflog 中追溯。
 - 后续 Agent 应在提交前再次检查 HEAD 和工作区，避免对并发 Agent 的提交执行 amend 或历史改写。
+
+## 2026-09-05 12:17
+
+### Agent
+
+Codex
+
+### 任务
+
+上传 GitHub 并提供 Life OS Web 预览
+
+### 目标
+
+将当前 `main` 分支的已提交工程上传到项目 GitHub 仓库，启动可实际访问的 Expo Web 预览，并通过真实页面交互检查首页 AI 计划和时间轴。
+
+### 修改文件
+
+- `data/seed.ts`
+- `screens/TodayScreen.tsx`
+- `screens/TimelineScreen.tsx`
+- `DEVLOG.md`
+
+### 实际修改
+
+- `data/seed.ts`：将演示任务、训练、Timeline 事件和周期任务的日期改为运行当天，避免跨天后首页没有今日任务。
+- `screens/TodayScreen.tsx`：完成率改为只按今日任务计算，修复应用 AI 计划后从 `25%` 错变为 `14%` 的问题。
+- `screens/TimelineScreen.tsx`：日期标题改为动态显示当前日期和星期，避免固定显示旧日期。
+- `DEVLOG.md`：记录本次 GitHub 上传、预览地址、验证结果和 GitHub Pages 状态。
+
+### 新增
+
+- 无新的功能模块。
+- GitHub 远端 `main` 已同步到本地提交 `54893a3`。
+- 本地 Expo Web 预览运行在 `http://localhost:8081`。
+
+### 删除
+
+- 无。
+
+### 为什么修改
+
+真实预览时发现系统日期已变为 2026-09-05，而种子数据仍固定为 2026-09-04；用户输入并应用 AI 计划后，首页任务集合和进度统计因此失真。此次只做与预览直接相关的日期和统计修复。
+
+### 验证
+
+- TypeScript（`npx tsc --noEmit`）：✅ 通过。
+- Expo Doctor（`npx expo-doctor`）：✅ 21/21 通过（推送前执行）。
+- Web Bundle（`npx expo export --platform web`）：✅ 成功。
+- Android Bundle（`npx expo export --platform android`）：✅ 成功，产出 Hermes bundle。
+- Web 运行：✅ `npm run web -- --port 8081` 启动成功。
+- 浏览器首页：✅ 真实打开并显示当前日期、任务、周期事项和进度。
+- AI 计划流程：✅ 输入一句话 → 显示结构化计划 → 应用后任务仍为 `1/4`、进度 `25%`，不重复追加已有任务。
+- Timeline：✅ 页面显示当前日期 `9月5日 · 星期六`，并展示工作、笔记、任务、健身、英语、日记事件。
+- GitHub 推送：✅ `git push origin main` 成功，远端从 `9be3be2` 更新到 `54893a3`。
+- 敏感文件检查：✅ 已检查 tracked files，未发现 `.env`、密钥或凭据文件。
+
+### 未完成
+
+- GitHub Pages 当前未启用，仓库 API 状态为 `has_pages: false`；本次没有擅自修改仓库 Pages 设置。
+- 没有生成 APK；EAS 仍需 Expo 登录和项目关联。
+
+### 已知问题 / 风险
+
+- 预览地址是当前开发机的 `localhost`，其他设备无法直接访问；Android 真机可使用 Expo Go 扫描终端中的 `exp://192.168.4.21:8081` 地址，但需与开发机处于同一网络。
+- GitHub 仓库虽然已上传，但未配置 Pages/Netlify/Vercel，因此没有公共 Web URL。
+- `dist/` 被 `.gitignore` 忽略，静态导出产物没有上传到 GitHub。
+
+### 给下一位 Agent 的信息
+
+- 当前远端仓库：`https://github.com/zhihao68/Life-OS`
+- 本地预览：`http://localhost:8081`
+- 如需公共预览，下一步应单独配置 GitHub Pages Actions，并设置 Expo Web 的 `/life-os` base path，避免资源路径 404。
+- 继续遵守：真实功能、测试和 APK 状态必须分开记录。
+
+### Git Commit
+
+待提交。
