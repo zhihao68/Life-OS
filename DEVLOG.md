@@ -359,4 +359,4 @@ Codex
 
 ### Git Commit
 
-`11db7dd2957512eec54888d4daacf0d7fcbb3b7b`
+`11db7dd2957512eec54888d4daacf0d7fcbb3b7b`（后续 Web 动画兼容修复：`4526724`）
