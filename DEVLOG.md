@@ -1,5 +1,75 @@
 # DEVLOG
 
+## 2026-09-18 21:35
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+解决 P0 问题 1/3/4：本地数据持久化、提醒通知、EAS APK 验证
+
+### 目标
+
+1. 业务数据接入 AsyncStorage，关闭应用不再丢失；2. 接入 expo-notifications，为今日任务安排本地提醒；3. 真实验证 EAS APK 构建链路当前状态。
+
+### 修改文件
+
+- `services/storage.ts`
+- `services/notificationService.ts`（新增）
+- `store/LifeOSContext.tsx`
+- `App.tsx`
+- `app.json`
+- `package.json` / `package-lock.json`
+- `TODO.md` / `DEVLOG.md`
+
+### 实际修改
+
+- `services/storage.ts`：从空实现改为 AsyncStorage 实现。存储 key `lifeos-state-v1`；`load()` 带 JSON 解析容错与结构校验（字段不全时回退种子数据）；`save()` 全量写入；`exportJSON` 保持。读写均 try/catch，失败只警告不崩溃。
+- `services/notificationService.ts`（新增）：`notificationsSupported()`（Web 环境直接不支持）；`requestNotificationPermission()`（处理 UNDETERMINED → 主动请求）；`syncTaskReminders(tasks, today)`——只为「今日到期 + 未完成 + 带时间」的任务安排通知，支持解析 `reminder` 字段中的「提前 N 分钟」，过期时间自动跳过；每次全量重排（先 `cancelAllScheduledNotificationsAsync`），保证与任务状态一致。
+- `store/LifeOSContext.tsx`：
+  - 启动水合：`useEffect` 中先 `localDatabase.load()`，有存档则恢复（并执行每日滚动），无存档用种子数据；完成后才置 `hydrated = true`。
+  - 持久化：`useEffect` 监听 `state` 变化自动 `save()`；用 `skipPersist` ref 防止水合前的种子数据覆盖存档。
+  - 新增每日滚动 `rollRecurringInstances()`：恢复存档时为 `nextRun <= 今天` 的启用周期任务补齐今天的实例（`rec-{id}-{today}` 去重），并把 `nextRun` 推进到未来（daily +1 天、weekly +7 天、monthly +1 月循环推进）。解决「存档后隔天打开今日任务为空」的问题。
+  - 新增通知副作用：`state.tasks` 变化后调用 `syncTaskReminders`（仅移动端且有权限时）。
+  - 新增工具函数 `localDateNow()`（本地时区日期，替代原 `toISOString()` 的 UTC 偏移问题）、`addDays()`、`addMonths()`。
+- `App.tsx`：未水合时渲染 `ActivityIndicator` 加载态，防止种子数据闪现和提前交互。
+- `app.json`：`plugins` 新增 `expo-notifications`（Android 13+ 通知权限声明由插件处理）。
+- `package.json`：新增 `@react-native-async-storage/async-storage 2.2.0`、`expo-notifications ~57.0.20`；顺带对齐 expo-doctor 新报的 patch 版本：`expo ~57.0.24`、`expo-font ~57.0.4`、`expo-splash-screen ~57.0.9`。
+
+### 验证
+
+- TypeScript（`npx tsc --noEmit`）：✅ 通过，0 错误
+- Expo Doctor：✅ 21/21 通过（依赖 patch 对齐前曾报 3 项 patch 不匹配，已修复后复验）
+- Web Bundle（`expo export --platform web`）：✅ 成功
+- Android Bundle（`expo export --platform android`）：✅ 成功，Hermes `AppEntry-7da2f2*.hbc`
+- EAS 构建（`eas-cli build -p android --profile preview --non-interactive`）：❌ 实际执行并失败于账号校验——"An Expo user account is required"。**未生成任何 APK**。该失败证明配置链路本身已到达账号门槛，其余阻塞项不存在，但云构建结果仍未知。
+- Web 页面交互冒烟 / 真机通知到达测试：⚠️ 未执行（无真机环境；通知触发效果需在 Android 真机或模拟器验证）
+
+### 未完成
+
+- EAS APK：等待 Expo 账号（`npx eas-cli login` 或设置 `EXPO_TOKEN`），登录后配置无需再改
+- 通知的真实到达、Android 13+ 权限弹窗在真机上的表现未验证
+- AI API（问题 2）未动：等待负责人提供 API Key 方案
+
+### 已知问题 / 风险
+
+- AsyncStorage 为全量 JSON 写入，数据量大（数千条）后写入耗时上升；届时需迁移 expo-sqlite（`LocalDatabase` 接口已抽象，可平滑替换实现）
+- `applyPlan` 中 `match.time`/`match.kind` 为原地修改，依赖展开运算符触发渲染，逻辑沿用原实现未改
+- 通知全量重排在任务频繁变更时会反复取消/重建调度，当前任务量级（<100）无影响
+- 水合期 `ActivityIndicator` 颜色使用 `colors.purple`，与现有 UI 色板一致
+
+### 给下一位 Agent 的信息
+
+- 下一步 P0-2：真实 AI API。改 `services/aiService.ts`，把 `generateMockPlan` 换成真实请求，保留「计划预览 → 用户确认 → applyPlan」流程；`LifeOSContext.generatePlan` 只需替换内部实现
+- 持久化读写请一律走 `services/storage.ts` 的 `localDatabase`，不要在组件里直接调 AsyncStorage
+- EAS 出包：`npx eas-cli login` → `npx eas-cli init` → `npx eas-cli build -p android --profile preview`
+
+### Git Commit
+
+本条对应 commit 见后续 `[WorkBuddy] feat:` 提交（DEVLOG 与代码同批提交前先写日志，最终 hash 以 git log 为准）
+
 ## 2026-09-04 19:05
 
 ### Agent

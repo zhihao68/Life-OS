@@ -6,12 +6,12 @@
 ## P0 — 产品可用性
 
 - ☐ 真实 AI API 接入：替换 `services/aiService.ts` 中的 Mock，接入 OpenAI/兼容 API，保留"解析 → 结构化预览 → 用户确认"流程（负责人需提供 API Key 方案）
-- ☐ 本地数据持久化：把 `services/storage.ts` 接上 AsyncStorage 或 expo-sqlite，业务数据移出 React state
-- ☐ 提醒/通知：expo-notifications 本地提醒，任务到期触发
+- ✅ 本地数据持久化：`services/storage.ts` 已接 AsyncStorage（key `lifeos-state-v1`），含结构校验、每日滚动补齐周期任务实例（2026-09-18，WorkBuddy）
+- ✅ 提醒/通知：expo-notifications 已接入，今日未完成任务自动安排本地提醒，支持"提前 N 分钟"，Web 端安全降级；真机到达效果待验证（2026-09-18，WorkBuddy）
 
 ## P1 — Android 真机与构建
 
-- ☐ EAS 云端 APK：登录 Expo 账号（`npx eas-cli login`）→ `npx eas-cli init` → `npx eas-cli build -p android --profile preview`，验证 APK 可安装
+- 🔄 EAS 云端 APK：配置与依赖全部就绪；实际执行 `eas build` 已验证仅差账号（"An Expo user account is required"）。待登录后重跑 `npx eas-cli build -p android --profile preview`
 - ☐ 本地 Android 开发环境：安装 JDK 17+ 与 Android Studio，`npx expo prebuild --platform android`，验证 `npx expo run:android`
 - ✅ eas.json 已创建，preview profile 已配置 `android.buildType = "apk"`（2026-09-04，WorkBuddy）
 - ✅ expo-doctor 21/21 通过，SDK 57 依赖已对齐（2026-09-04，WorkBuddy）
@@ -32,4 +32,5 @@
 ## 已知问题
 
 - 本机无 JDK / Android SDK / Android Studio，本地 APK 编译不可用（依赖云端 EAS 或补装环境）
-- EAS 尚未登录账号，APK 构建未实际执行过
+- EAS 未登录账号：`eas build` 实测失败于 "An Expo user account is required"（2026-09-18）
+- 通知真实到达效果、Android 13+ 权限弹窗未在真机验证
