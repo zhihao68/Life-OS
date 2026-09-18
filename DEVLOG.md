@@ -45,6 +45,7 @@ WorkBuddy
 - Web Bundle（`expo export --platform web`）：✅ 成功
 - Android Bundle（`expo export --platform android`）：✅ 成功，Hermes `AppEntry-7da2f2*.hbc`
 - EAS 构建（`eas-cli build -p android --profile preview --non-interactive`）：❌ 实际执行并失败于账号校验——"An Expo user account is required"。**未生成任何 APK**。该失败证明配置链路本身已到达账号门槛，其余阻塞项不存在，但云构建结果仍未知。
+- GitHub 推送：❌ `git push origin main` 失败（无法连接 github.com:443，本机代理未通）。提交 `f4be9f2`/`f9b5b41` 仍在本地，网络恢复后需补推。
 - Web 页面交互冒烟 / 真机通知到达测试：⚠️ 未执行（无真机环境；通知触发效果需在 Android 真机或模拟器验证）
 
 ### 未完成
