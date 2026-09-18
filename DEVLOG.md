@@ -68,7 +68,7 @@ WorkBuddy
 
 ### Git Commit
 
-本条对应 commit 见后续 `[WorkBuddy] feat:` 提交（DEVLOG 与代码同批提交前先写日志，最终 hash 以 git log 为准）
+`f4be9f2`（feat: AsyncStorage persistence, task reminders, EAS login verification）
 
 ## 2026-09-04 19:05
 
