@@ -11,5 +11,6 @@ export type Workout = { id: string; date: string; focus: string; durationMin: nu
 export type TimelineEvent = { id: string; date: string; time: string; title: string; type: 'task' | 'workout' | 'note' | 'journal' | 'ai'; detail: string; linkedTaskId?: string };
 export type ReviewMetrics = { taskCompletionRate: number; recurringCompletionRate: number; fitnessCompletionRate: number; learningHours: number; noteCount: number; delayedTaskCount: number; focusHours: number };
 export type AIAction = { id: string; tool: 'createTask' | 'createRecurringTask' | 'createReminder' | 'createNote' | 'createWorkoutPlan'; title: string; time?: string; category: Task['category']; explanation: string; requiresConfirmation: boolean };
-export type AIPlan = { id: string; input: string; summary: string; actions: AIAction[]; createdAt: string };
+export type AIPlanAction = AIAction;
+export type AIPlan = { id: string; input: string; summary: string; actions: AIAction[]; createdAt: string; source?: 'ai' | 'local'; note?: string };
 export type LifeOSState = { tasks: Task[]; recurringTasks: RecurringTask[]; notes: Note[]; workoutPlan: WorkoutPlan; workouts: Workout[]; timelineEvents: TimelineEvent[]; lastAIPlan?: AIPlan };

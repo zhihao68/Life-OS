@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { seedState } from '../data/seed';
-import { generateMockPlan } from '../services/aiService';
+import { generatePlan as generateAIPlan } from '../services/aiService';
 import { localDatabase } from '../services/storage';
 import { notificationsSupported, requestNotificationPermission, syncTaskReminders } from '../services/notificationService';
 import { createRecurringInstance } from '../utils/recurrence';
@@ -110,9 +110,12 @@ export function LifeOSProvider({ children }: { children: React.ReactNode }) {
 
   const generatePlan = async (input: string) => {
     setGenerating(true);
-    const plan = await generateMockPlan(input);
-    setState((current) => ({ ...current, lastAIPlan: plan }));
-    setGenerating(false);
+    try {
+      const plan = await generateAIPlan(input, state);
+      setState((current) => ({ ...current, lastAIPlan: plan }));
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const applyPlan = (plan: AIPlan) =>
