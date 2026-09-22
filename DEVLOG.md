@@ -70,9 +70,14 @@ WorkBuddy
 - 通知渠道 ID 常量 `REMINDER_CHANNEL_ID`，改动需同时兼顾 iOS（无渠道概念）
 - 新增纯逻辑模块时记得加入 `scripts/logic-check/tsconfig.json` 的 include
 
+### 云端 APK
+
+- build `32421552-45dc-4dba-8cd6-3168a2b5fbb8`：✅ FINISHED
+- 下载：https://expo.dev/artifacts/eas/zCVwvSuT3kW4mtSd1UErGLDbt1fn9aB2C-Zc5TQP7ow.apk
+
 ### Git Commit
 
-本条随 `[WorkBuddy] fix: harden reminders (android channel, tap handling, scheduled-reminder inspector)` 提交
+`c50bb32`（fix: harden reminders）——已推送 GitHub（`2802659..c50bb32`）
 
 ## 2026-09-22 17:00
 
