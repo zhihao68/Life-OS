@@ -19,6 +19,7 @@ const assert = require('assert');
 const { localDateNow, reminderAtFor, timeFromMinutes, addDays, dateLabel } = require('./out/utils/datetime.js');
 const { generatePlan, generateLocalPlan, isAIConfigured, aiModelName } = require('./out/services/aiService.js');
 const { createRecurringInstance } = require('./out/utils/recurrence.js');
+const { planReminders, taskFireDate } = require('./out/utils/reminderPlan.js');
 
 const results = [];
 function test(name, fn) {
@@ -87,6 +88,67 @@ test('本地兜底：健身 + 论文关键词生成任务', () => {
 test('AI 配置已从 .env 注入', () => {
   assert.strictEqual(isAIConfigured(), true, '未读取到 AI 配置');
   assert.ok(aiModelName().length > 0);
+});
+
+// ---------- 提醒排定规则（item 1 核心逻辑） ----------
+const baseTask = (over) => ({ id: 't1', title: '修改论文', time: '14:00', dueDate: today, status: 'todo', kind: 'one-off', category: 'work', ...over });
+
+test('排定提醒：今日未完成且有未来时间 → 命中 1 条', () => {
+  const now = new Date(`${today}T10:00:00`);
+  const list = planReminders([baseTask({})], today, now);
+  assert.strictEqual(list.length, 1);
+  assert.strictEqual(list[0].taskId, 't1');
+  assert.strictEqual(list[0].fireAt.getHours(), 14);
+});
+
+test('排定提醒：已完成的今日任务不排定', () => {
+  const now = new Date(`${today}T10:00:00`);
+  assert.strictEqual(planReminders([baseTask({ status: 'done' })], today, now).length, 0);
+});
+
+test('排定提醒：非今日任务不排定', () => {
+  const now = new Date(`${today}T10:00:00`);
+  assert.strictEqual(planReminders([baseTask({ dueDate: addDays(today, 1) })], today, now).length, 0);
+});
+
+test('排定提醒：提醒时间已过则不排定', () => {
+  const now = new Date(`${today}T15:00:00`);
+  assert.strictEqual(planReminders([baseTask({})], today, now).length, 0);
+});
+
+test('排定提醒：显式 reminderAt 优先于提前分钟数', () => {
+  const now = new Date(`${today}T10:00:00`);
+  const task = baseTask({ reminder: '提前 10 分钟', reminderAt: `${today}T13:50` });
+  const fire = taskFireDate(task);
+  assert.strictEqual(fire.getHours(), 13);
+  assert.strictEqual(fire.getMinutes(), 50);
+});
+
+test('排定提醒：仅剩「提前 N 分钟」时按偏移计算', () => {
+  const task = baseTask({ reminder: '提前 30 分钟' });
+  const fire = taskFireDate(task);
+  assert.strictEqual(fire.getHours(), 13);
+  assert.strictEqual(fire.getMinutes(), 30);
+});
+
+test('排定提醒：无时间且无 reminderAt 的任务不排定', () => {
+  const now = new Date(`${today}T10:00:00`);
+  assert.strictEqual(planReminders([baseTask({ time: undefined })], today, now).length, 0);
+});
+
+test('排定提醒：多条按触发时间升序', () => {
+  const now = new Date(`${today}T07:00:00`);
+  const list = planReminders([
+    baseTask({ id: 'late', title: '晚', time: '20:00' }),
+    baseTask({ id: 'early', title: '早', time: '09:00' }),
+  ], today, now);
+  assert.deepStrictEqual(list.map((item) => item.taskId), ['early', 'late']);
+});
+
+test('排定提醒：通知正文包含提醒标签', () => {
+  const now = new Date(`${today}T07:00:00`);
+  const list = planReminders([baseTask({ reminder: '提前 10 分钟' })], today, now);
+  assert.match(list[0].body, /提前 10 分钟/);
 });
 
 (async () => {

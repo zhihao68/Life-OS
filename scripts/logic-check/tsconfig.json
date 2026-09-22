@@ -10,5 +10,12 @@
     "esModuleInterop": true,
     "strict": true
   },
-  "include": ["env-shim.d.ts", "../../utils/datetime.ts", "../../utils/recurrence.ts", "../../services/aiService.ts"]
+  "include": [
+    "env-shim.d.ts",
+    "../../utils/datetime.ts",
+    "../../utils/reminderTime.ts",
+    "../../utils/reminderPlan.ts",
+    "../../utils/recurrence.ts",
+    "../../services/aiService.ts"
+  ]
 }

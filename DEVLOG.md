@@ -1,5 +1,79 @@
 # DEVLOG
 
+## 2026-09-22 17:20
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+第 1 项「提醒与通知」加固：从"代码完成"补到"真机可信"
+
+### 目标
+
+上一轮（`5fad885`）已实现提醒的基础链路，本轮补齐会直接影响"到点能不能真的弹出"的关键环节：Android 通知渠道、点击通知回到任务、应用内可查看系统真实排定的提醒队列，并把排定决策抽成纯函数以做无头验证。
+
+### 修改文件
+
+- `utils/reminderTime.ts`（新增）
+- `utils/reminderPlan.ts`（新增）
+- `services/notificationService.ts`
+- `screens/TodayScreen.tsx`
+- `App.tsx`
+- `scripts/logic-check/{tsconfig.json,run.cjs}`
+
+### 实际修改
+
+- `utils/reminderTime.ts`（新增，纯函数无 RN 依赖）：`parseLocalDateTime` / `parseReminderAt` / `parseReminderOffset`，从 notificationService 中抽出，便于无头测试
+- `utils/reminderPlan.ts`（新增，纯函数）：`taskFireDate()` + `planReminders(tasks, today, now)` —— 决定"现在应该把哪些任务排进系统通知"（今天到期 + 未完成 + 触发时间在未来），按触发时间升序返回
+- `services/notificationService.ts`：
+  - 新增 `ensureAndroidChannel()`，创建高优先级渠道 `lifeos-reminders`（`AndroidImportance.MAX` + 声音 + 震动 + 锁屏可见）。**这是本轮最关键的修复**：Android 8+ 不建渠道时通知可能被系统降级为静默通知，不会以横幅弹出
+  - 调度与测试通知的 trigger 均带上 `channelId`
+  - `syncTaskReminders()` 改为调用 `planReminders()`，逻辑单一来源
+  - 新增 `getScheduledReminders()`：读取 `getAllScheduledNotificationsAsync()`，返回系统里真实存在的待触发通知
+  - 新增 `subscribeToNotificationTap(handler)`：监听通知点击，回传 `data.taskId`
+- `screens/TodayScreen.tsx`：设置弹层新增「已排定提醒」（打开一个弹层列出系统队列中的每条提醒及其触发时间，可刷新）与「重新排定提醒」（手动触发 `syncTaskReminders` 并提示条数）
+- `App.tsx`：`useEffect` 订阅通知点击 → 切回「今天」Tab 并 toast 提示对应任务标题（任务已删除时给出兜底文案）
+
+### 新增
+
+- `utils/reminderTime.ts`、`utils/reminderPlan.ts`
+- 逻辑验证套件新增 9 条提醒排定断言
+
+### 删除
+
+- 无
+
+### 验证（全部实际执行）
+
+- TypeScript（`npx tsc --noEmit`）：✅ 0 错误
+- `npm run verify:logic`：✅ **23/23 通过**（原 14 条 + 新增 9 条提醒断言）
+  - 新增覆盖：今日未完成且有未来时间 → 命中；已完成不排定；非今日不排定；提醒时间已过不排定；显式 `reminderAt` 优先于「提前 N 分钟」；仅剩偏移文案时按时长换算（14:00 提前 30 分钟 → 13:30）；无时间且无 `reminderAt` 不排定；多条按时间升序；通知正文包含提醒标签
+- Expo Doctor：✅ 21/21
+- Android Bundle 导出：✅ 成功
+- **真机通知到达 / 通知渠道优先级 / 点击通知跳转：⚠️ 未验证**（无连接设备）。这三项只能靠真机确认，本轮已把验证入口做进应用（设置 → 已排定提醒 / 测试通知），方便你在手机上直接核对
+
+### 未完成
+
+- 真机验证（用户侧操作即可完成：设置 → 测试通知；给任务设 2 分钟后的提醒 → 设置 → 已排定提醒）
+- iOS 的通知权限描述文案（`app.json` 暂未配置 `NSUserNotificationUsageDescription` 相关说明，iOS 端未测试）
+
+### 风险
+
+- 若用户此前拒绝过通知权限，`requestNotificationPermission()` 会返回 false 并静默不排定；应用内「已排定提醒」为空时会提示可能原因
+- 强制停止应用后，部分 Android 机型会清空已排定通知（系统行为，非应用缺陷）
+
+### 给下一位 Agent 的信息
+
+- 提醒链路单一入口：`notificationService.syncTaskReminders(tasks, today)`；排定决策在 `utils/reminderPlan.planReminders`（纯函数，改这里请同步加断言）
+- 通知渠道 ID 常量 `REMINDER_CHANNEL_ID`，改动需同时兼顾 iOS（无渠道概念）
+- 新增纯逻辑模块时记得加入 `scripts/logic-check/tsconfig.json` 的 include
+
+### Git Commit
+
+本条随 `[WorkBuddy] fix: harden reminders (android channel, tap handling, scheduled-reminder inspector)` 提交
+
 ## 2026-09-22 17:00
 
 ### Agent

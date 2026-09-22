@@ -3,7 +3,7 @@ import { ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, Tex
 import { Ionicons } from '@expo/vector-icons';
 import { useLifeOS, useNavigation } from '../store/LifeOSContext';
 import { Card, Chip, Field, GhostButton, colors, Header, PrimaryButton, Screen, SectionHeader, Sheet, shadow } from '../components/ui';
-import { sendTestNotification } from '../services/notificationService';
+import { getScheduledReminders, sendTestNotification, syncTaskReminders, type ScheduledReminder } from '../services/notificationService';
 import { dateLabel, localDateNow, reminderAtFor, timeNowLabel } from '../utils/datetime';
 import type { AIPlan, Task } from '../types';
 
@@ -23,6 +23,8 @@ export function TodayScreen() {
   const [recurringSheet, setRecurringSheet] = useState(false);
   const [reminderTask, setReminderTask] = useState<Task | null>(null);
   const [customReminder, setCustomReminder] = useState('');
+  const [remindersSheet, setRemindersSheet] = useState(false);
+  const [scheduled, setScheduled] = useState<ScheduledReminder[] | null>(null);
   const [draft, setDraft] = useState({ title: '', time: '', reminder: '' });
 
   const today = localDateNow();
@@ -77,6 +79,15 @@ export function TodayScreen() {
     setTaskReminder(reminderTask.id, at);
     showToast(`提醒已设为 ${at.slice(11)}`);
     setReminderTask(null);
+  };
+
+  const syncTaskRemindersNow = async () => syncTaskReminders(state.tasks, today);
+
+  const openScheduled = async () => {
+    setRemindersSheet(true);
+    setScheduled(null);
+    const list = await getScheduledReminders();
+    setScheduled(list);
   };
 
   const testNotification = async () => {
@@ -241,12 +252,32 @@ export function TodayScreen() {
         )) : <Text style={styles.emptyInline}>还没有周期任务，可以让 AI 帮你创建（例如「每周六浇花」）。</Text>}
       </Sheet>
 
+      {/* 已排定提醒（系统级自检） */}
+      <Sheet visible={remindersSheet} title="系统里已排定的提醒" onClose={() => setRemindersSheet(false)}
+        footer={<><GhostButton label="刷新" icon="refresh-outline" onPress={openScheduled} /><PrimaryButton label="关闭" onPress={() => setRemindersSheet(false)} /></>}
+      >
+        {scheduled === null ? <Text style={styles.sheetHint}>正在读取系统通知队列…</Text> : scheduled.length ? scheduled.map((item) => (
+          <View key={item.id} style={styles.manageRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.taskTitle}>{item.body}</Text>
+              <Text style={styles.taskHint}>触发时间：{item.fireAt}</Text>
+            </View>
+            <Ionicons name="notifications" size={16} color={colors.purple} />
+          </View>
+        )) : <Text style={styles.sheetHint}>系统队列为空。可能原因：通知权限未开启、任务没有时间、或提醒时间已过。</Text>}
+        <Text style={styles.sheetHint}>这里显示的是操作系统里真实存在的待触发通知，用来确认提醒确实排上了（应用重启后仍会保留，关机或强制停止可能被系统清理）。</Text>
+      </Sheet>
+
       {/* 设置 */}
       <Sheet visible={settingsSheet} title="设置与自检" onClose={() => setSettingsSheet(false)}>
         <Text style={styles.settingLine}>任务 {state.tasks.length} 项 · 笔记 {state.notes.length} 篇 · 体重记录 {state.weights.length} 条</Text>
         <View style={styles.sheetActions}>
           <GhostButton label="测试通知" icon="notifications-outline" onPress={testNotification} />
+          <GhostButton label="已排定提醒" icon="list-outline" onPress={() => { setSettingsSheet(false); openScheduled(); }} />
+        </View>
+        <View style={styles.sheetActions}>
           <GhostButton label="去笔记" icon="document-text-outline" onPress={() => { setSettingsSheet(false); go('notes'); }} />
+          <GhostButton label="重新排定提醒" icon="refresh-outline" onPress={async () => { const count = await syncTaskRemindersNow(); showToast(count ? `已重新排定 ${count} 条提醒` : '当前没有需要提醒的任务'); }} />
         </View>
         <View style={styles.sheetActions}>
           <GhostButton label="去健身" icon="barbell-outline" onPress={() => { setSettingsSheet(false); go('fitness'); }} />

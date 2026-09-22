@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -10,10 +10,21 @@ import { TimelineScreen } from './screens/TimelineScreen';
 import { NotesScreen } from './screens/NotesScreen';
 import { FitnessScreen } from './screens/FitnessScreen';
 import { ReviewScreen } from './screens/ReviewScreen';
+import { subscribeToNotificationTap } from './services/notificationService';
 
 function RootShell() {
   const [tab, setTab] = useState<Tab>('today');
-  const { hydrated, toast } = useLifeOS();
+  const { hydrated, toast, state, showToast } = useLifeOS();
+
+  // 点击系统提醒 → 回到「今天」并提示对应任务（任务可能已被删除）
+  useEffect(() => {
+    const unsubscribe = subscribeToNotificationTap((taskId) => {
+      setTab('today');
+      const task = state.tasks.find((item) => item.id === taskId);
+      showToast(task ? `提醒任务：${task.title}` : '已回到今天的任务');
+    });
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [state.tasks, showToast]);
   if (!hydrated) {
     return <View style={styles.loading}><ActivityIndicator size="large" color={colors.purple} /></View>;
   }
