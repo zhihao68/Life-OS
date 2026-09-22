@@ -11,7 +11,7 @@
 
 ## P1 — Android 真机与构建
 
-- 🔄 EAS 云端 APK：配置与依赖全部就绪；实际执行 `eas build` 已验证仅差账号（"An Expo user account is required"）。待登录后重跑 `npx eas-cli build -p android --profile preview`
+- ✅ EAS 云端 APK：build `e1902915` 构建成功，APK 结构验证有效（72MB，含 arm64 原生库），本地副本 `life-os-preview-1.0.0.apk`；真机安装测试待做（2026-09-22，WorkBuddy）
 - ☐ 本地 Android 开发环境：安装 JDK 17+ 与 Android Studio，`npx expo prebuild --platform android`，验证 `npx expo run:android`
 - ✅ eas.json 已创建，preview profile 已配置 `android.buildType = "apk"`（2026-09-04，WorkBuddy）
 - ✅ expo-doctor 21/21 通过，SDK 57 依赖已对齐（2026-09-04，WorkBuddy）
@@ -32,5 +32,5 @@
 ## 已知问题
 
 - 本机无 JDK / Android SDK / Android Studio，本地 APK 编译不可用（依赖云端 EAS 或补装环境）
-- EAS 未登录账号：`eas build` 实测失败于 "An Expo user account is required"（2026-09-18）
+- EAS 已出 APK（build `e1902915`）；重新出包需在 `D:\dev\life-os` 目录执行（git insteadOf 重写 + `EAS_SKIP_AUTO_FINGERPRINT=1`，详见 DEVLOG 2026-09-22）
 - 通知真实到达效果、Android 13+ 权限弹窗未在真机验证

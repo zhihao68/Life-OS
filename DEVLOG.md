@@ -1,5 +1,76 @@
 # DEVLOG
 
+## 2026-09-22 12:15
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+EAS 云端构建 Android APK（用户已提供 EXPO_TOKEN）并真机可装
+
+### 目标
+
+用用户提供的 Expo Access Token 完成 `eas init` + `eas build -p android --profile preview`，产出可直接安装的 APK。
+
+### 修改文件
+
+- `.env`（新增，gitignored，存 EXPO_TOKEN）
+- `app.json`（三次修改：eas init 写入 projectId/owner；两次修复 splash 配置）
+- `assets/splash-logo.png`（新增）
+- `TODO.md` / `DEVLOG.md`
+
+### 实际修改
+
+- `.env`：写入用户提供的 `EXPO_TOKEN`（在 .gitignore 中，不会入库）
+- `app.json`（commit `b78d7a7`）：`eas init` 自动写入 `extra.eas.projectId: 43eb490e-…` 与 `owner: lllzhis-team`
+- `app.json`（commit `93bf79e`）：首次构建失败（`resource drawable/splashscreen_logo not found`），移除 `"image": null`——无效，SDK 57 的 expo-splash-screen 插件在无图时仍引用该资源
+- `assets/splash-logo.png` + `app.json`（commit `acaaf09`）：用 Node 脚本生成 512x512 品牌启动图（紫圆角方块），插件配置 `image + imageWidth:200 + backgroundColor`——问题解决
+- 另设置全局 git 配置 `url."D:/dev/life-os".insteadOf "file:///D:/dev/life-os"`（见"环境问题"）
+
+### 构建过程（4 次尝试，全部真实执行）
+
+1. `D:\开发\Life OS` 直接构建 → 失败：EAS 用 `git clone file:///…` 打包，路径含空格+中文导致 clone 128
+2. 克隆到 `D:\dev\life-os`（纯 ASCII）重试 → 失败：同 128 错误，**证明不是路径问题**；手动复现发现本机 PortableGit 2.54 处理 `file:///D:/…` URL 缺陷（`'/D:/…' does not appear to be a git repository`）
+3. 加全局 `insteadOf` 重写绕过 → 上传成功、云端 Gradle 失败：`splashscreen_logo` 资源缺失；去掉 `"image": null` 重试 → 仍失败（同错误）
+4. 生成真实 splash 图片并配置 → **构建成功**（build `e1902915`，耗时约 9 分钟）
+
+### 产物验证（均为实际执行）
+
+- 状态：`FINISHED`（expo.dev build `e1902915-d526-49c9-8464-dd29fbbd8c53`）
+- APK 下载链接：https://expo.dev/artifacts/eas/TF_IOv7psM9zQ02yC0uYNMpvrvyNY3-j5sT9ZW4SDw8.apk
+- 本地副本：`D:\开发\Life OS\life-os-preview-1.0.0.apk`（72,326,952 字节，**未入库**，勿 commit）
+- 结构校验：✅ PK zip 头 + EOCD 有效；包含 AndroidManifest.xml、classes.dex、lib/arm64-v8a 原生库、androidx splashscreen 元数据
+- **真机安装测试：⚠️ 未执行**（无连接设备；APK 为内部分发签名，安装时需允许未知来源）
+
+### 环境问题记录（给后续 Agent）
+
+- 本机 Git 推 GitHub 偶发 `schannel: SSL/TLS handshake failed`（代理 127.0.0.1:7897 间歇抽风），重试即可
+- EAS 构建必须从 `D:\dev\life-os` 跑（依赖 `insteadOf` 重写 + 该目录已装 node_modules）；`D:\开发\Life OS` 路径本身无法被 EAS 打包
+- `EAS_SKIP_AUTO_FINGERPRINT=1` 必须设置（EAS CLI fingerprint 在本机崩溃）
+- 首次 `eas build` 已自动初始化 versionCode=1 并生成云端 keystore（Build Credentials kPJIivkg9Z）
+
+### 未完成
+
+- APK 真机安装与运行验证（需手机）
+- 通知真实到达测试（需手机）
+- AI API（P0-2）待用户提供 Key
+
+### 风险
+
+- APK 72MB 偏大：preview 为通用 APK（含多 ABI）。后续可改 `buildType: "app-bundle"` 或 ABI split 减体积
+- `.env` 中的 token 有效期未知，过期后需用户重新生成
+
+### 给下一位 Agent 的信息
+
+- APK 已可用，P0 只剩 AI API 接入（改 `services/aiService.ts`，Key 放 `.env` 的 `EXPO_PUBLIC_AI_API_KEY` / `EXPO_PUBLIC_AI_BASE_URL`）
+- 重新出包命令：`cd D:\dev\life-os && export $(grep EXPO_TOKEN .env | tr -d '\r') && export EAS_SKIP_AUTO_FINGERPRINT=1 && npx eas-cli build -p android --profile preview --non-interactive --no-wait`
+
+### Git Commit
+
+`b78d7a7` / `93bf79e` / `acaaf09`（+ 本条 DEVLOG 随后提交）
+
 ## 2026-09-18 21:35
 
 ### Agent
