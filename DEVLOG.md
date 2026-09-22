@@ -109,9 +109,18 @@ WorkBuddy
 - 提醒链路：UI 只负责写 `task.reminderAt`，调度统一在 `notificationService.syncTaskReminders`，由 store 的 effect 触发——不要在组件里直接调 `Notifications`
 - 出包命令见本文件 2026-09-22 12:15 条目（需在 `D:\dev\life-os` 目录、并设置 `EAS_SKIP_AUTO_FINGERPRINT=1`）
 
+### 云端 APK 重建
+
+- build `f27996f9-7fa8-49ec-b378-713788b35eaf`：✅ FINISHED
+- 下载：https://expo.dev/artifacts/eas/u7fbZqsg9REPDyZZh99-rQtE0nnBS_bpTOWXTT4DQ4E.apk
+- 说明：APK 已包含本轮六项修复与真实 AI 配置（EXPO_PUBLIC_AI_* 由 EAS preview 环境变量注入）
+- **未安装验证**：未在真机安装运行，构建成功 ≠ 功能在设备上验证通过
+
 ### Git Commit
 
-本条记录随 `[WorkBuddy] feat: six-item fix pass` 提交（hash 见下次 git log）
+- `5fad885`：feat: reminders, notes CRUD, safe-area, weight tracking, tappable actions, AI notes（DEVLOG/TODO 同批）
+- `1bf94d2`：chore: untrack stray empty text file
+- 均已推送 GitHub（`bc2a9c4..1bf94d2`）
 
 ## 2026-09-22 16:30
 
