@@ -15,11 +15,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f7f8fc",
-          "image": null,
-          "dark": {
-            "backgroundColor": "#f7f8fc"
-          }
+          "backgroundColor": "#f7f8fc"
         }
       ],
       "expo-font",
