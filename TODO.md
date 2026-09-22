@@ -5,13 +5,14 @@
 
 ## P0 — 产品可用性
 
-- ☐ 真实 AI API 接入：替换 `services/aiService.ts` 中的 Mock，接入 OpenAI/兼容 API，保留"解析 → 结构化预览 → 用户确认"流程（负责人需提供 API Key 方案）
+- ✅ 真实 AI API 接入：`services/aiService.ts` 已接 OpenAI 兼容接口（中转站 `sxian.my` + `deepseek-v4-flash-0731`），含 JSON 强约束、上下文去重、60s 超时、失败降级本地规则；API 层探测通过，真机端到端待验证（2026-09-22，WorkBuddy）
+- ☐ 扩展 `applyPlan` 支持 createNote / createWorkoutPlan / createReminder，再放开 prompt 工具白名单（2026-09-22）
 - ✅ 本地数据持久化：`services/storage.ts` 已接 AsyncStorage（key `lifeos-state-v1`），含结构校验、每日滚动补齐周期任务实例（2026-09-18，WorkBuddy）
 - ✅ 提醒/通知：expo-notifications 已接入，今日未完成任务自动安排本地提醒，支持"提前 N 分钟"，Web 端安全降级；真机到达效果待验证（2026-09-18，WorkBuddy）
 
 ## P1 — Android 真机与构建
 
-- ✅ EAS 云端 APK：build `e1902915` 构建成功，APK 结构验证有效（72MB，含 arm64 原生库），本地副本 `life-os-preview-1.0.0.apk`；真机安装测试待做（2026-09-22，WorkBuddy）
+- ✅ EAS 云端 APK：build `e1902915`（无 AI 版）用户已真机安装成功；build `78f3ebd9`（含 AI）构建成功，下载链接见 DEVLOG（2026-09-22，WorkBuddy）
 - ☐ 本地 Android 开发环境：安装 JDK 17+ 与 Android Studio，`npx expo prebuild --platform android`，验证 `npx expo run:android`
 - ✅ eas.json 已创建，preview profile 已配置 `android.buildType = "apk"`（2026-09-04，WorkBuddy）
 - ✅ expo-doctor 21/21 通过，SDK 57 依赖已对齐（2026-09-04，WorkBuddy）

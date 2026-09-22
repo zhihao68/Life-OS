@@ -1,5 +1,88 @@
 # DEVLOG
 
+## 2026-09-22 16:30
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+P0-2：接入真实 AI（一句话 → 结构化计划）
+
+### 目标
+
+把 `services/aiService.ts` 的 Mock 替换为真实 AI 调用（OpenAI 兼容协议），保留「输入一句话 → 计划预览 → 用户确认应用」流程，并在 AI 不可用时降级，保证功能不中断。
+
+### 修改文件
+
+- `services/aiService.ts`（重写）
+- `store/LifeOSContext.tsx`
+- `screens/TodayScreen.tsx`
+- `types/index.ts`
+- `.gitignore`
+- `.env`（gitignored，未入库）
+
+### 实际修改
+
+- `services/aiService.ts`：
+  - 通过 `EXPO_PUBLIC_AI_BASE_URL / _API_KEY / _MODEL / _TIMEOUT_MS` 读取配置，`isAIConfigured()` 判断是否可用
+  - `SYSTEM_PROMPT` 强约束输出 JSON（summary + actions[≤5]），只允许 `createTask` / `createRecurringTask` 两种工具（与 `applyPlan` 实际支持的范围一致，避免出现"预览有、应用无"的假动作）
+  - `buildUserPrompt()` 注入当天日期、今天已有任务、已有周期任务，让模型避免重复创建
+  - `callChatCompletion()`：`fetch` + `AbortController` 超时（默认 60s）、`response_format: json_object`
+  - `normalizePlan()`：解析 + 白名单校验（tool/category/时间格式），非法字段回落默认值；`firstJsonObject()` 容忍模型返回带前后缀的文本
+  - `generateLocalPlan()`：抽出原 Mock 逻辑作为降级路径；`generatePlan()` 优先真实 AI，失败时返回本地计划并在 `note` 中说明原因
+  - `generateMockPlan` 保留为 `generatePlan` 的别名，避免破坏其他调用点
+- `store/LifeOSContext.tsx`：改调 `generatePlan(input, state)`（传入当前 state 做去重上下文）；`isGenerating` 用 `try/finally` 保证异常时也能复位
+- `screens/TodayScreen.tsx`：计划卡片显示来源（`AI 生成` / `本地规则`）与降级原因 `plan.note`
+- `types/index.ts`：`AIPlan` 新增 `source?: 'ai' | 'local'` 与 `note?: string`；导出 `AIPlanAction` 别名
+- `.gitignore`：新增 `*.apk` / `*.aab`（见"过程中的修正"）
+
+### 过程中的修正（真实发生的失误）
+
+- 首次提交时 `git add -A` 误将 72MB 的 `life-os-preview-1.0.0.apk` 与一个空的“新建 文本文档.txt”带入暂存区。**该 commit 尚未 push**，遂 `git rm --cached` + 补充 `.gitignore` 后 `--amend` 修正，未污染仓库历史（APK 文件本身仍保留在磁盘上，只是不入库）。
+- TodayScreen 样式插入位置错误（插到了 `StyleSheet.create` 之外），tsc 报 4 处语法错误，已定位并修正，复验 0 错误。
+
+### 验证
+
+- 真实 API 探测（Node 脚本直连中转站，UTF-8 正常）：✅ HTTP 200，10.6s，返回合法 JSON
+  - 输入「我今天想健身、改论文，还要每周六浇花」→ 输出 2 条：`createTask 健身 18:30 fitness`、`createRecurringTask 浇花 09:00 requiresConfirmation=true`；**正确识别周期任务**，且**自动跳过**了当天已存在的「修改论文第二章」
+  - tool 合法 ✅ 时间格式合法 ✅
+- 模型可用性：`GET /v1/models` ✅ 返回 `deepseek-v4-flash-0731`、`deepseek-v4-pro-0813`
+- TypeScript（`npx tsc --noEmit`）：✅ 0 错误
+- Expo Doctor：✅ 21/21
+- Android Bundle（`expo export --platform android`）：✅ 1.9MB Hermes 包；校验 `sxian.my`、`deepseek-v4-flash-0731` 确实被内联进 bundle ✅
+- EAS 云端 APK 重建（build `78f3ebd9`）：✅ FINISHED（详见下条）
+- **App 内 AI 调用的端到端真机验证：⚠️ 未执行**（未在手机上实测"输入→AI返回→应用计划"全链路，仅验证了 API 层与打包层）
+
+### 关键决策
+
+- 只开放 `createTask` / `createRecurringTask` 两种工具：`applyPlan` 目前只处理这两类，放开其余工具会产生"预览显示但应用无效"的体验欺骗
+- AI 不可用时降级到本地规则而不是报错：用户在弱网/欠费时仍能安排今天
+- 云端构建的 API 配置写入 **EAS 环境变量**（`eas env:create`，preview 环境），而不是提交到 `eas.json`——避免 key 进 git
+
+### 未完成
+
+- 真机端到端验证
+- `createNote` / `createWorkoutPlan` / `createReminder` 三种工具的落地（需先扩展 `applyPlan`）
+- 流式输出（当前为一次性返回，实测约 10s，用户需等待）
+
+### 风险
+
+- `EXPO_PUBLIC_*` 会内联进 APK，反编译可见。当前使用中转站限额 key，风险可接受；换官方 key 前必须改为经后端代理
+- 中转站稳定性不可控：挂了会自动降级到本地规则（UI 会提示"AI 调用失败"）
+- 模型带 reasoning（返回含 `reasoning_content`），响应时间约 10s，弱网可能触发 60s 超时
+
+### 给下一位 Agent 的信息
+
+- 换供应商只需改 `.env`（本地）/ EAS 环境变量（云端）中的三个值，代码无需改动
+- `generatePlan(input, state)` 是唯一入口，降级逻辑在同一个函数内
+- 下一步建议：扩展 `applyPlan` 支持 `createNote` / `createWorkoutPlan`，再把 prompt 白名单放开
+
+### Git Commit
+
+`bbd980c`（feat: real AI plan generation via OpenAI-compatible API with local fallback；含 .gitignore 修正）
+
 ## 2026-09-22 12:15
 
 ### Agent
