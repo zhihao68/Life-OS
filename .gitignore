@@ -8,3 +8,4 @@ dist/
 *.log
 *.apk
 *.aab
+scripts/logic-check/out/

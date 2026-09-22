@@ -19,19 +19,24 @@
 
 ## P2 — 功能补全
 
-- ☐ Notes：Markdown 编辑、图片附件、搜索、双向链接
-- ☐ Fitness：真实训练记录写入与统计
-- ☐ Timeline：统一事件流（Todo/Note/Fitness/Journal/Event）
-- ☐ Review：周结/月结数据聚合 + AI 总结
+- ✅ Notes：新增/编辑/删除/搜索/文件夹与标签筛选已实现，数据落盘（2026-09-22，WorkBuddy）
+- ☐ Notes 进阶：Markdown 预览、图片附件、双向链接编辑界面
+- ✅ 提醒：任务可设提醒时间（准时/提前 10·30 分钟/提前 1 小时/自定义），接 expo-notifications 本地调度 + 通知自检入口（2026-09-22，WorkBuddy；真机到达待验证）
+- ✅ Fitness：体重按日期记录 + 趋势图 + 增删改；训练计划与动作支持增删改（2026-09-22，WorkBuddy）
+- ✅ 全面屏：接入 react-native-safe-area-context，顶部状态栏与底部安全区统一处理（2026-09-22，WorkBuddy）
+- ✅ 交互可用性：全量排查可见按钮，补齐 handler + Toast 反馈 + 跨 Tab 跳转（2026-09-22，WorkBuddy）
+- 🔄 Timeline：统一事件流已接入 AI 创建与训练完成事件，普通任务完成尚未自动写入
+- 🔄 Review：日/周/月/长期区间统计已改为真实数据计算 + 数据快照导出；AI 深度总结待做
 
 ## P3 — 长期架构
 
 - ☐ 云同步与冲突处理（`services/syncService.ts` 接口已预留）
-- ☐ 导出：Markdown / JSON / ZIP
-- ☐ 测试体系（Jest + 关键 service 单测）
+- 🔄 导出：JSON 数据快照已在「总结」页实现（可选中复制）；Markdown / ZIP 待做
+- ✅ 测试体系：`npm run verify:logic` 无头逻辑验证套件（14 项断言，直接跑真实业务代码）（2026-09-22，WorkBuddy）
 
 ## 已知问题
 
 - 本机无 JDK / Android SDK / Android Studio，本地 APK 编译不可用（依赖云端 EAS 或补装环境）
+- 六项修复中的 UI 交互、通知到达、安全区实际效果、持久化重启恢复均未在真机验证（2026-09-22）
 - EAS 已出 APK（build `e1902915`）；重新出包需在 `D:\dev\life-os` 目录执行（git insteadOf 重写 + `EAS_SKIP_AUTO_FINGERPRINT=1`，详见 DEVLOG 2026-09-22）
 - 通知真实到达效果、Android 13+ 权限弹窗未在真机验证

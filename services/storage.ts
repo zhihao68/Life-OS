@@ -17,7 +17,7 @@ function isValidState(value: unknown): value is LifeOSState {
     && Array.isArray(state.notes)
     && Array.isArray(state.workouts)
     && Array.isArray(state.timelineEvents)
-    && typeof state.workoutPlan === 'object';
+    && typeof state.workoutPlan === 'object' && state.workoutPlan !== null;
 }
 
 export const localDatabase: LocalDatabase = {

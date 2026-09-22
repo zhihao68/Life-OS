@@ -1,5 +1,118 @@
 # DEVLOG
 
+## 2026-09-22 17:00
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+六项修复与完善：提醒通知 / 笔记 CRUD / 全面屏安全区 / 健身（体重 + 训练计划）/ 交互可用性 / AI 自然语言建待办与笔记
+
+### 目标
+
+保持现有设计风格与技术栈（Expo SDK 57 + RN 0.86 + TypeScript，无新增 UI 库），每项功能真实可用并有数据落盘，不出现"只有按钮没功能"。
+
+### 修改文件（共 16 个）
+
+新增：`utils/datetime.ts`、`scripts/logic-check/{tsconfig.json,run.cjs,env-shim.d.ts}`
+重写/修改：`types/index.ts`、`data/seed.ts`、`components/ui.tsx`、`App.tsx`、`store/LifeOSContext.tsx`、`services/storage.ts`、`services/notificationService.ts`、`services/aiService.ts`、`screens/{TodayScreen,NotesScreen,FitnessScreen,TimelineScreen,ReviewScreen}.tsx`、`package.json`、`.gitignore`
+
+### 分项修改说明
+
+**1. 提醒与通知**
+- `types`：`Task` 新增 `reminderAt`（`YYYY-MM-DDTHH:mm`），保留 `reminder` 作为展示标签
+- `services/notificationService.ts`：新增前台通知处理器 `setNotificationHandler`；`taskFireDate()` 优先取 `reminderAt`，否则按「任务时间 − 提前分钟数」计算；`syncTaskReminders()` 只排定「今天到期 + 未完成 + 时间未过」的任务，每次全量重排；新增 `sendTestNotification()` 用于真机自检
+- `utils/datetime.ts`：`reminderAtFor(task, offset)` 负责时间计算（含跨零点回绕，已单测）
+- `screens/TodayScreen.tsx`：任务行新增铃铛按钮 → 打开提醒弹层（准时 / 提前 10 分钟 / 提前 30 分钟 / 提前 1 小时 / 自定义 HH:MM / 取消提醒）；新增任务时可同时填提醒时间；页面底部"通知自检"卡片可发测试通知
+- `store/LifeOSContext.tsx`：新增 `setTaskReminder`；启动水合时排定提醒并 toast 提示数量；`state.tasks` 变化后自动重排
+
+**2. 笔记模块**
+- `screens/NotesScreen.tsx` 全量重写：FAB / 头部按钮新建笔记；点击笔记打开编辑器（标题 + Markdown 正文 + 文件夹）；可保存、可删除；搜索框实时过滤；「文件夹」「标签」两个 Tab 可真实筛选并回填；置顶与最近编辑分组显示
+- `store`：新增 `addNote` / `updateNote` / `deleteNote`（更新时自动刷新 `updatedAt`）
+- `types`：`Note` 新增 `createdAt`；`data/seed.ts` 补齐种子值
+- 持久化沿用既有链路：状态变化 → `localDatabase.save()` → AsyncStorage
+
+**3. 全面屏适配**
+- 新增依赖 `react-native-safe-area-context@~5.7.0`
+- `App.tsx`：根节点包 `SafeAreaProvider`
+- `components/ui.tsx`：`Screen` 用 `useSafeAreaInsets()` 处理顶部内边距与底部滚动留白；`BottomNav` 高度/内边距随底部安全区增大；FAB 位置随底部安全区上移；`Sheet` 底部内边距随安全区调整；`Toast` 位置同样避让
+- 五个页面统一改为通过 `Screen` 的 `fab` 属性挂载悬浮按钮（原先 FAB 放在滚动容器内，会随内容滚动并与底部导航重叠）
+
+**4. 健身模块（参考"易减"的信息架构：记录 → 趋势 → 计划）**
+- `types`：新增 `WeightEntry`；`WorkoutDay` / `WorkoutSet` 补 `id`（支持精确增删改）；`LifeOSState` 新增 `weights`
+- `data/seed.ts`：提供 4 条体重种子数据（近 3 周）
+- `store`：新增 `addWeight` / `updateWeight` / `deleteWeight`（同日期自动覆盖）、`addWorkoutDay` / `updateWorkoutDay` / `removeWorkoutDay`、`addExercise` / `updateExercise` / `removeExercise`、`toggleWorkoutComplete`（完成训练会写入 Timeline 事件）
+- `screens/FitnessScreen.tsx` 重写：Segment 切换「训练计划 / 体重记录」
+  - 训练计划：周条选择训练日 → 编辑当天内容、设为休息、删除当天；动作列表可新增/编辑/删除（组数、次数、重量）；「开始训练」可切换完成状态
+  - 体重记录：当前体重 + 较上次差值 + 累计变化 + 最近 8 条柱状趋势（纯 View 绘制，未引入图表库）+ 历史列表（可编辑/删除）+ 新增记录
+- `services/storage.ts`：结构校验兼容旧存档（`weights` 缺失时不丢数据）；`store` 内 `migrateState()` 为旧存档补 `weights`、`createdAt`、各类 `id`
+
+**5. 交互可用性**
+- `components/ui.tsx`：`SectionHeader` 的 action 文案改为可点击（新增 `onAction`）；`Header` 新增 `onAction`；新增 `PrimaryButton` / `GhostButton` / `Chip` / `Sheet` / `Field` / `Toast`
+- `store`：新增 `showToast`（2.6s 自动消失）与 `NavigationProvider / useNavigation`，让页面内任意按钮可以跳转 Tab
+- 补齐所有原先无响应的可见元素：
+  - Today：头部设置（数据概览 + 通知测试 + 快捷跳转）、"查看全部任务"、完成情况、周期任务开关、周期任务管理（暂停/开启/删除）、今日训练卡片（跳健身）、近期笔记（跳笔记）
+  - Notes：FAB / 头部 + / 文件夹行 / 标签行 / 筛选条清除 / 笔记行
+  - Fitness：周条、编辑当天、设为休息、删除当天、开始训练、新增/编辑/删除动作、编辑/删除体重、新增记录、刷新统计
+  - Timeline：上一天/下一天/回到今天、事件卡片（打开详情）、详情内「切换关联任务状态」
+  - Review：周期切换（左/右箭头与 Segment 联动）、去今天/看时间轴、导出数据快照（读取真实 state 的 JSON，弹层内可选中复制）
+
+**6. AI 助手（自然语言建待办 / 笔记）**
+- `services/aiService.ts`：系统提示词改为明确的意图判断规则（记录类 → `createNote`；重复类 → `createRecurringTask`；其余 → `createTask`），并加入 3 条 few-shot 示例；`createNote` 支持 `content` 正文；归一化逻辑保留白名单校验（非法 tool/时间/分类自动降级）
+- `store.applyPlan()`：新增 `createNote` 落地——写入 `notes`（folder「收集箱」、tag「AI」）并生成 Timeline 事件；任务与周期任务逻辑保持不变
+- `screens/TodayScreen.tsx`：计划预览卡对笔记类 action 显示「笔记」而不是"待安排"
+- 本地兜底 `generateLocalPlan()` 同步支持笔记意图（记录/灵感/想法/备忘等关键词）
+
+### 新增
+
+- `utils/datetime.ts`（日期/时间工具，含 reminder 计算）
+- `scripts/logic-check/`（无头逻辑验证套件，`npm run verify:logic`）
+- 依赖：`react-native-safe-area-context`
+
+### 删除
+
+- 无源码删除；`screens/*` 中被替换的旧内联样式已随重写移除
+
+### 验证（全部实际执行）
+
+- TypeScript（`npx tsc --noEmit`）：✅ 0 错误
+- Expo Doctor：✅ 21/21 通过（新增 safe-area-context 后复验）
+- Bundle 导出：✅ Android Hermes 包 2.0MB、Web 包均成功
+- 逻辑单测（`npm run verify:logic`，直接运行编译后的真实业务代码）：✅ **14/14 通过**
+  - 覆盖：`reminderAtFor` 提前 10 分钟 → 13:50、跨零点回绕 → 23:50、`timeFromMinutes`、`addDays` 跨月、`dateLabel` 中文星期、周期任务实例生成、本地兜底识别笔记意图、AI 返回 `createTask + createNote` 的正确归一化、非法 tool/时间/分类降级、AI 返回带前后缀文字时仍能解析 JSON、请求失败/返回非 JSON 时降级到本地规则并标注原因、AI 配置已从 `.env` 注入
+- 真实 AI 意图判断（直连中转站，使用文件内真实 `SYSTEM_PROMPT`）：✅ **4/4 通过**
+  - 「今天下午改论文，晚上健身，另外帮我记一下：实验部分要补一组 UASB 数据的对比图」→ createTask 健身 @19:00 + createNote（content 58 字）
+  - 「记个想法：把每周复盘做成模板，周日晚上跑一遍」→ createNote（未误判为任务）
+  - 「每周六浇花，还要每天记账」→ 两个 createRecurringTask
+  - 「明天要交实验报告，今晚先把数据整理一下」→ createTask @20:00
+  - 注：首轮提示词下模型把"帮我记一下"误判为任务（2/3 失败），补充意图优先级与 few-shot 示例后达标——这是本轮真实发生的迭代
+- **真机端到端：⚠️ 未执行**（无连接设备）。以下均未实测：点击各按钮的实际交互、通知到达与权限弹窗、安全区在刘海/手势条机型上的实际效果、AsyncStorage 落盘与重启恢复、体重趋势图渲染
+
+### 未完成
+
+- `applyPlan` 尚未支持 `createReminder` / `createWorkoutPlan`（prompt 白名单未放开，避免"预览有、应用无"）
+- Timeline 事件目前来自种子数据 + AI 应用 + 训练完成；普通任务完成不会自动生成事件
+- 笔记附件图片、双向链接编辑界面未做
+
+### 风险
+
+- 旧存档迁移逻辑（`migrateState`）只做了字段补全，未做深度校验；若用户手动改坏 JSON，会退回种子数据（有 toast 与 console 提示）
+- 体重趋势图为纯 View 柱状图，数据超过 8 条只显示最近 8 条
+- AI 响应耗时 5–17s（模型带 reasoning），弱网下可能触发 60s 超时并降级为本地规则
+- 通知全量重排在任务频繁变更时会反复取消/重建调度（当前数据量级无影响）
+
+### 给下一位 Agent 的信息
+
+- 任何逻辑改动后请运行 `npm run verify:logic`；新增纯逻辑模块时把它加入 `scripts/logic-check/tsconfig.json` 的 include 与 `run.cjs` 的断言
+- 提醒链路：UI 只负责写 `task.reminderAt`，调度统一在 `notificationService.syncTaskReminders`，由 store 的 effect 触发——不要在组件里直接调 `Notifications`
+- 出包命令见本文件 2026-09-22 12:15 条目（需在 `D:\dev\life-os` 目录、并设置 `EAS_SKIP_AUTO_FINGERPRINT=1`）
+
+### Git Commit
+
+本条记录随 `[WorkBuddy] feat: six-item fix pass` 提交（hash 见下次 git log）
+
 ## 2026-09-22 16:30
 
 ### Agent

@@ -33,21 +33,33 @@ const SYSTEM_PROMPT = `你是 Life OS 的生活规划助手。用户会用一句
   "summary": "一句话总结这次安排（中文，20 字以内）",
   "actions": [
     {
-      "tool": "createTask" | "createRecurringTask",
-      "title": "任务标题（中文，简短具体）",
-      "time": "HH:MM（24 小时制；无法确定时给合理时间）",
+      "tool": "createTask" | "createRecurringTask" | "createNote",
+      "title": "标题（中文，简短具体；笔记则作为笔记标题）",
+      "time": "HH:MM（24 小时制；笔记可省略）",
       "category": "work" | "fitness" | "learning" | "life" | "note",
       "explanation": "为什么这样安排（中文，20 字以内）",
-      "requiresConfirmation": true | false
+      "requiresConfirmation": true | false,
+      "content": "仅 createNote 需要：Markdown 正文，把用户说的内容整理成结构清晰的笔记"
+    }
     }
   ]
 }
 
-规则：
-1. 时间要错开，符合人的作息（工作类放在 9:00-12:00 / 14:00-18:00，健身放在 18:00-20:00，学习放在 20:00-22:00）。
-2. 涉及「每次/每周/每天/每月」等重复性安排时用 createRecurringTask，并设 requiresConfirmation 为 true；一次性安排用 createTask。
-3. 用户没提到的内容不要凭空添加，最多输出 5 条 actions。
-4. 用户表达模糊时，给出一个合理的默认安排，不要反问。`;
+意图判断规则（按顺序判断）：
+1. 「记一下 / 记个 / 帮我记 / 记录一下 / 存一下 / 想法 / 灵感 / 摘录 / 素材 / 备忘 / 归档」等表述 → createNote。**即使这句话里含时间词（如"周日晚上"），也不要建任务**，时间只写进 content 正文里。
+2. 「每周 / 每天 / 每月 / 每次 / 定期」等重复表述 → createRecurringTask，并设 requiresConfirmation 为 true。
+3. 其余表示"要做某件事"的 → createTask。
+4. 一句话里既有待办又有要记录的信息时，同时输出 createTask 与 createNote 两类 action。
+5. 时间要错开，符合人的作息（工作类放在 9:00-12:00 / 14:00-18:00，健身放在 18:00-20:00，学习放在 20:00-22:00）。
+6. 用户没提到的内容不要凭空添加，最多输出 5 条 actions。
+7. 用户表达模糊时，给出一个合理的默认安排，不要反问。
+
+示例：
+输入「记一下：下周一要找导师确认开题方向」→ [{"tool":"createNote","title":"找导师确认开题方向","content":"# 找导师确认开题方向
+
+时间：下周一"}]
+输入「今天健身，另外记个想法：把周报模板简化」→ [{"tool":"createTask","title":"健身","time":"19:00"},{"tool":"createNote","title":"把周报模板简化","content":"# 把周报模板简化"}]
+输入「每周六浇花」→ [{"tool":"createRecurringTask","title":"浇花","requiresConfirmation":true}]`;
 
 function buildUserPrompt(input: string, state?: LifeOSState, today = ''): string {
   const contextLines: string[] = [];
@@ -81,7 +93,8 @@ function normalizePlan(raw: RawPlan, input: string): AIPlan | null {
     if (!title) return;
     const tool = VALID_TOOLS.includes(action.tool as AIToolName) ? (action.tool as AIToolName) : 'createTask';
     const category = VALID_CATEGORIES.includes(action.category as Task['category']) ? (action.category as Task['category']) : 'life';
-    const time = typeof action.time === 'string' && /^\d{1,2}:\d{2}$/.test(action.time) ? action.time : '待安排';
+    const rawTime = typeof action.time === 'string' && /^\d{1,2}:\d{2}$/.test(action.time) ? action.time : undefined;
+    const time = tool === 'createNote' ? rawTime : (rawTime ?? '待安排');
     actions.push({
       id: `ai-${Date.now()}-${index}`,
       tool,
@@ -90,6 +103,7 @@ function normalizePlan(raw: RawPlan, input: string): AIPlan | null {
       category,
       explanation: typeof action.explanation === 'string' ? action.explanation : 'AI 生成的安排',
       requiresConfirmation: action.requiresConfirmation ?? tool === 'createRecurringTask',
+      content: typeof action.content === 'string' && action.content.trim() ? action.content.trim() : undefined,
     });
   });
   if (!actions.length) return null;
@@ -151,6 +165,11 @@ export function generateLocalPlan(input: string): AIPlan {
   if (/英语|学习/.test(normalized)) addTask('english', '学习英语 30 分钟', '20:30', 'learning', '安排在训练后，保持连续性');
   if (/浇花/.test(normalized)) actions.push({ id: 'water', tool: 'createRecurringTask', title: '浇花', time: '10:00', category: 'life', explanation: '创建每周六的周期任务', requiresConfirmation: true });
   if (/房租/.test(normalized)) actions.push({ id: 'rent', tool: 'createRecurringTask', title: '交房租', time: '09:00', category: 'life', explanation: '创建每月 1 日的周期任务', requiresConfirmation: true });
+  if (/笔记|记一下|记录|灵感|想法|摘录|备忘/.test(normalized)) {
+    actions.push({ id: 'note', tool: 'createNote', title: normalized.slice(0, 18) || '新笔记', category: 'note', explanation: '把这段内容整理成笔记', requiresConfirmation: false, content: `# ${normalized.slice(0, 18) || '新笔记'}
+
+${normalized}` });
+  }
   if (!actions.length) addTask('general', normalized || '整理今天的计划', '待安排', 'life', '先加入收件箱，稍后再安排时间');
   return {
     id: `ai-${Date.now()}`,
