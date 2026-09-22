@@ -1,5 +1,72 @@
 # DEVLOG
 
+## 2026-09-22 17:40
+
+### Agent
+
+WorkBuddy
+
+### 任务
+
+修复「APK 实际是旧版本」的构建事故（用户实测反馈）
+
+### 背景：真实事故复盘
+
+用户反馈：安装我给出的下载链接后，应用内容仍是旧版本。核查 EAS 构建元数据后发现**两次构建（`f27996f9` 六项修复、`32421552` 提醒加固）记录的 `gitCommitHash` 都是 `44f6740`**——即打包进去的是接入 AI 那一版的代码，六项修复与提醒加固**根本没有进包**。这是本 Agent 的失误，用户看到的现象属实。
+
+### 根因（两个独立缺陷，均已修复）
+
+1. **构建工作目录同步失败被我掩盖**
+   - 构建目录 `D:\dev\life-os` 里残留了我在该目录做验证时产生的产物（`services/aiService.js`、`types/index.js`、`utils/recurrence.js`、`_verify/`）以及对 `services/aiService.ts` 的本地覆盖
+   - 于是 `git pull` 实际未推进 HEAD（仍停在 `44f6740`），而我在命令末尾用 `| tail -1` 截断了输出，**既没看到错误也没做 HEAD 校验**，直接提交了构建
+2. **versionCode 恒为 1**
+   - `eas.json` 只有 `production` profile 配了 `autoIncrement`，`preview` 没配，导致每次 APK 的 versionCode 都是 1
+   - 后果：系统层面新旧包版本号相同，用户更难判断装的是哪一版（也更容易被误认为"没更新"）
+
+### 修改文件
+
+- `eas.json`（preview 增加 `autoIncrement: true`）
+- `utils/appInfo.ts`（新增，读取当前安装包版本）
+- `screens/TodayScreen.tsx`（设置弹层显示版本/build）
+- `scripts/build-android.sh`（新增，安全出包脚本）
+- `package.json` / `package-lock.json`（新增 `expo-constants`）
+- `.gitignore`（忽略 `eas-build-result.json`）
+
+### 实际修改
+
+- `eas.json`：`build.preview.autoIncrement: true` —— 每次构建 versionCode 自增，系统可正确识别为升级包
+- `utils/appInfo.ts`：通过 `expo-constants` 读取 `nativeAppVersion` / `nativeBuildVersion` / `expoConfig.android.versionCode`，真机上以原生清单为准
+- `screens/TodayScreen.tsx`：设置弹层新增一行「版本 x.y.z（build N）· 环境 …」，**用户可一眼确认装的是哪一版**
+- `scripts/build-android.sh`（新增）：出包前强制校验 ①源仓库工作树干净 ②当前提交已推送到 `origin/main` ③构建目录 HEAD 与源仓库 HEAD 一致（不一致直接中止），构建后再用元数据反查 `gitCommitHash` 是否等于该 HEAD，不一致则报错退出
+
+### 验证（全部实际执行）
+
+- 构建目录清理与同步：`git checkout -- .` + 清理 tsc 残留 → `git pull --ff-only` → HEAD = `d87cabb`，与原仓库一致 ✅
+- `npm run verify:logic`：✅ 23/23（改动 `eas.json`/新增 `appInfo` 后复验）
+- TypeScript：✅ 0 错误；Expo Doctor：✅ 21/21
+- 重新出包（脚本执行，build `1776edf3-bb8b-45ca-859b-660654705bc3`）：
+  - 状态：✅ FINISHED
+  - **versionCode：2**（首次出现递增，修复生效）
+  - **构建提交：`d87cabb0a75e83dbc5c0eb58f0e70e37c4f55150`** = 源仓库最新 HEAD ✅（修复前恒为 `44f6740`）
+  - APK：https://expo.dev/artifacts/eas/1Q1ZhM3nfhTeJys6tq1AucDpudxqhKgogmCfEdLmdaY.apk
+- 脚本自身的路径缺陷（node 不认 `$BUILD_DIR` 的 POSIX 路径导致第 5 步报错）已修复，但**修复后的脚本未再整轮跑过**（只做了静态检查）⚠️
+
+### 未完成 / 教训
+
+- 未真机安装确认；但本次已有可自证的判据（设置页版本号 + versionCode 2）
+- 教训（已写入脚本）：**构建后必须用元数据反查 gitCommitHash**；命令输出不允许用 `tail -1` 掩盖错误
+- `production` profile 也依赖 `autoIncrement`，无需改动
+
+### 风险
+
+- versionCode 现在由 EAS 远程维护，本地 app.json 不再体现；如需回滚版本号需在 EAS 侧调整
+- 构建工作目录仍是 `D:\dev\life-os`（受本机 `file://` URL 缺陷所限），后续一律走 `scripts/build-android.sh`，不要手写构建命令
+
+### Git Commit
+
+- `61f95f1`（fix: autoIncrement versionCode + 显示安装版本）
+- `d87cabb`（chore: 安全出包脚本；本次构建即基于该提交）
+
 ## 2026-09-22 17:20
 
 ### Agent

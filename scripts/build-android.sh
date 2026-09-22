@@ -51,10 +51,10 @@ echo "    构建目录已同步到 ${BUILD_HEAD:0:7} ✅"
 echo "==> 4/5 提交 EAS 构建（profile: $PROFILE，等待完成）"
 set -a; . "$REPO_DIR/.env"; set +a
 export EAS_SKIP_AUTO_FINGERPRINT=1
-npx eas-cli build -p android --profile "$PROFILE" --non-interactive --json > "$BUILD_DIR/eas-build-result.json"
+npx eas-cli build -p android --profile "$PROFILE" --non-interactive --json > eas-build-result.json
 
 echo "==> 5/5 校验构建产物对应的提交"
-BUILD_ID="$(node -e "const r=require(process.argv[1]);console.log(Array.isArray(r)?r[0].id:r.id)" "$BUILD_DIR/eas-build-result.json")"
+BUILD_ID="$(node -e "const r=require('./eas-build-result.json');console.log(Array.isArray(r)?r[0].id:r.id)")"
 echo "    构建 ID: $BUILD_ID"
 npx eas-cli build:view "$BUILD_ID" --json 2>/dev/null \
   | node -e "
