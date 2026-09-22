@@ -5,6 +5,7 @@ import { useLifeOS, useNavigation } from '../store/LifeOSContext';
 import { Card, Chip, Field, GhostButton, colors, Header, PrimaryButton, Screen, SectionHeader, Sheet, shadow } from '../components/ui';
 import { getScheduledReminders, sendTestNotification, syncTaskReminders, type ScheduledReminder } from '../services/notificationService';
 import { dateLabel, localDateNow, reminderAtFor, timeNowLabel } from '../utils/datetime';
+import { appVersionInfo } from '../utils/appInfo';
 import type { AIPlan, Task } from '../types';
 
 const REMINDER_PRESETS: { label: string; offset: number }[] = [
@@ -271,6 +272,7 @@ export function TodayScreen() {
       {/* 设置 */}
       <Sheet visible={settingsSheet} title="设置与自检" onClose={() => setSettingsSheet(false)}>
         <Text style={styles.settingLine}>任务 {state.tasks.length} 项 · 笔记 {state.notes.length} 篇 · 体重记录 {state.weights.length} 条</Text>
+        <Text style={styles.settingLine}>版本 {appVersionInfo().version}（build {appVersionInfo().build}）· 环境 {appVersionInfo().source}</Text>
         <View style={styles.sheetActions}>
           <GhostButton label="测试通知" icon="notifications-outline" onPress={testNotification} />
           <GhostButton label="已排定提醒" icon="list-outline" onPress={() => { setSettingsSheet(false); openScheduled(); }} />
