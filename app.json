@@ -24,6 +24,12 @@
       ],
       "expo-font",
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "43eb490e-0f17-4e07-9964-e61df22ecea2"
+      }
+    },
+    "owner": "lllzhis-team"
   }
 }
